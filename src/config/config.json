@@ -1,0 +1,9 @@
+{
+  "remotes": [
+    {
+      "id": "b79a1d66-bd82-4c7e-9e03-c37799994cf1",
+      "remote_name": "123",
+      "provider": "drive"
+    }
+  ]
+}
