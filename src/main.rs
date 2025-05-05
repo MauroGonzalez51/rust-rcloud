@@ -136,39 +136,19 @@ fn main() {
                 return;
             };
 
-            let mut command = Command::new("rclone");
-            command
+            let mut process = Command::new("rclone")
                 .arg("sync")
                 .arg(&path.local_path)
-                .arg(format!("{}:{}", remote.remote_name, path.remote_path));
+                .arg(format!("{}:{}", remote.remote_name, path.remote_path))
+                .spawn()
+                .expect("Failed to execute rclone");
 
-            match command.spawn() {
-                Ok(mut child) => match child.wait() {
-                    Ok(status) => {
-                        if status.success() {
-                            println!(
-                                "[ SUCCESS ] synced |{}| to |{}|",
-                                path.local_path, path.remote_path
-                            );
-                            return;
-                        }
+            process.wait().expect("Failed to wait for rclone");
 
-                        println!(
-                            "[ ERROR ] failed to sync |{}| to |{}|: {:?}",
-                            path.local_path,
-                            path.remote_path,
-                            status.code()
-                        );
-                    }
-                    Err(err) => {
-                        eprintln!("[ ERROR ] failed to wait for rclone: {}", err);
-                    }
-                },
-
-                Err(err) => {
-                    eprintln!("[ ERROR ] failed to execute rclone: {}", err);
-                }
-            }
+            println!(
+                "[ SUCCESS ] synced |{}| to |{}|",
+                path.local_path, path.remote_path
+            );
         }
         Commands::Pull { path_id } => {
             let Some(path) = config.paths.iter().find(|path| path.id == path_id) else {
@@ -185,39 +165,19 @@ fn main() {
                 return;
             };
 
-            let mut command = Command::new("rclone");
-            command
+            let mut process = Command::new("rclone")
                 .arg("sync")
                 .arg(format!("{}:{}", remote.remote_name, path.remote_path))
-                .arg(&path.local_path);
+                .arg(&path.local_path)
+                .spawn()
+                .expect("Failed to execute rclone");
 
-            match command.spawn() {
-                Ok(mut child) => match child.wait() {
-                    Ok(status) => {
-                        if status.success() {
-                            println!(
-                                "[ SUCCESS ] synced |{}| to |{}|",
-                                path.remote_path, path.local_path
-                            );
-                            return;
-                        }
+            process.wait().expect("Failed to wait for rclone");
 
-                        println!(
-                            "[ ERROR ] failed to sync |{}| to |{}|: {:?}",
-                            path.remote_path,
-                            path.local_path,
-                            status.code()
-                        );
-                    }
-                    Err(err) => {
-                        eprintln!("[ ERROR ] failed to wait for rclone: {}", err);
-                    }
-                },
-
-                Err(err) => {
-                    eprintln!("[ ERROR ] failed to execute rclone: {}", err);
-                }
-            }
+            println!(
+                "[ SUCCESS ] synced |{}| to |{}|",
+                path.remote_path, path.local_path
+            );
         }
     }
 }
