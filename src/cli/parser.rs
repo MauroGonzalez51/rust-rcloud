@@ -18,6 +18,14 @@ pub enum Commands {
         #[command(subcommand)]
         action: PathCommand,
     },
+    Sync {
+        #[arg(short, long)]
+        path_id: String,
+    },
+    Pull {
+        #[arg(short, long)]
+        path_id: String,
+    },
 }
 
 #[derive(Subcommand)]

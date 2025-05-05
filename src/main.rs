@@ -5,7 +5,7 @@ use clap::Parser;
 use cli::parser::{Cli, Commands, PathCommand, RemoteCommand};
 use config::schema::{Config, PathConfig, Remote};
 use dotenvy::dotenv;
-use std::path::Path;
+use std::{path::Path, process::Command};
 use uuid::Uuid;
 
 fn main() {
@@ -15,7 +15,7 @@ fn main() {
         std::env::set_var("RUST_BACKTRACE", "1");
     }
 
-    let config_path = std::env::var("CONFIG_PATH").expect("CONFIG_PATH is not set");
+    let config_path = std::env::var("RUST_RCLOUD_CONFIG").expect("RUST_RCLOUD_CONFIG is not set");
     let mut config = Config::load(config_path.as_str());
     let cli = Cli::parse();
 
@@ -121,5 +121,103 @@ fn main() {
                 config.save();
             }
         },
+        Commands::Sync { path_id } => {
+            let Some(path) = config.paths.iter().find(|path| path.id == path_id) else {
+                println!("[ ERROR ] path with id |{}| not found", path_id);
+                return;
+            };
+
+            let Some(remote) = config
+                .remotes
+                .iter()
+                .find(|remote| remote.id == path.remote_id)
+            else {
+                println!("[ ERROR ] remote with id |{}| not found", path.remote_id);
+                return;
+            };
+
+            let mut command = Command::new("rclone");
+            command
+                .arg("sync")
+                .arg(&path.local_path)
+                .arg(format!("{}:{}", remote.remote_name, path.remote_path));
+
+            match command.spawn() {
+                Ok(mut child) => match child.wait() {
+                    Ok(status) => {
+                        if status.success() {
+                            println!(
+                                "[ SUCCESS ] synced |{}| to |{}|",
+                                path.local_path, path.remote_path
+                            );
+                            return;
+                        }
+
+                        println!(
+                            "[ ERROR ] failed to sync |{}| to |{}|: {:?}",
+                            path.local_path,
+                            path.remote_path,
+                            status.code()
+                        );
+                    }
+                    Err(err) => {
+                        eprintln!("[ ERROR ] failed to wait for rclone: {}", err);
+                    }
+                },
+
+                Err(err) => {
+                    eprintln!("[ ERROR ] failed to execute rclone: {}", err);
+                }
+            }
+        }
+        Commands::Pull { path_id } => {
+            let Some(path) = config.paths.iter().find(|path| path.id == path_id) else {
+                println!("[ ERROR ] path with id |{}| not found", path_id);
+                return;
+            };
+
+            let Some(remote) = config
+                .remotes
+                .iter()
+                .find(|remote| remote.id == path.remote_id)
+            else {
+                println!("[ ERROR ] remote with id |{}| not found", path.remote_id);
+                return;
+            };
+
+            let mut command = Command::new("rclone");
+            command
+                .arg("sync")
+                .arg(format!("{}:{}", remote.remote_name, path.remote_path))
+                .arg(&path.local_path);
+
+            match command.spawn() {
+                Ok(mut child) => match child.wait() {
+                    Ok(status) => {
+                        if status.success() {
+                            println!(
+                                "[ SUCCESS ] synced |{}| to |{}|",
+                                path.remote_path, path.local_path
+                            );
+                            return;
+                        }
+
+                        println!(
+                            "[ ERROR ] failed to sync |{}| to |{}|: {:?}",
+                            path.remote_path,
+                            path.local_path,
+                            status.code()
+                        );
+                    }
+                    Err(err) => {
+                        eprintln!("[ ERROR ] failed to wait for rclone: {}", err);
+                    }
+                },
+
+                Err(err) => {
+                    eprintln!("[ ERROR ] failed to execute rclone: {}", err);
+                }
+            }
+        }
     }
 }
