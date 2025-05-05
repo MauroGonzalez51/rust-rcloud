@@ -5,5 +5,13 @@
       "remote_name": "123",
       "provider": "drive"
     }
+  ],
+  "paths": [
+    {
+      "id": "72ca3c73-f03f-43ad-8a6f-66de763b05bd",
+      "remote_id": "b79a1d66-bd82-4c7e-9e03-c37799994cf1",
+      "local_path": "/home/arch/dev/rust/learning-actix",
+      "remote_path": "/"
+    }
   ]
 }

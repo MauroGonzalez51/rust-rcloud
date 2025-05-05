@@ -9,8 +9,17 @@ pub struct Remote {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct PathConfig {
+    pub id: String,
+    pub remote_id: String,
+    pub local_path: String,
+    pub remote_path: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub remotes: Vec<Remote>,
+    pub paths: Vec<PathConfig>,
 
     #[serde(skip)]
     pub config_path: String,
@@ -31,6 +40,7 @@ impl Config {
 
         Config {
             remotes: vec![],
+            paths: vec![],
             config_path: config_path.to_string(),
         }
     }

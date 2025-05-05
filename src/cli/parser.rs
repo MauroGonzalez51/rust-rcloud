@@ -14,6 +14,10 @@ pub enum Commands {
         #[command(subcommand)]
         action: RemoteCommand,
     },
+    Path {
+        #[command(subcommand)]
+        action: PathCommand,
+    },
 }
 
 #[derive(Subcommand)]
@@ -38,5 +42,23 @@ pub enum RemoteCommand {
 
         #[arg(short = 'p', long)]
         new_provider: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum PathCommand {
+    List,
+    Add {
+        #[arg(short = 'r', long)]
+        remote_id: String,
+
+        #[arg(short = 'l', long)]
+        local_path: String,
+
+        #[arg(short = 'e', long)]
+        remote_path: String,
+    },
+    Remove {
+        id: String,
     },
 }
