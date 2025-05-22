@@ -83,11 +83,12 @@ fn main() {
 
                 for path in config.paths.iter() {
                     println!(
-                        "|{}| {:<width$} -> {} ({})",
+                        "|{}|\n {:<width$} -> {} ({})\n [{}]\n",
                         path.id,
                         path.local_path,
                         path.remote_path,
                         path.remote_id,
+                        path.alias,
                         width = max
                     );
                 }
@@ -96,6 +97,7 @@ fn main() {
                 remote_id,
                 local_path,
                 remote_path,
+                alias,
             } => {
                 if !config.remotes.iter().any(|remote| remote.id == remote_id) {
                     println!("[ ERROR ] remote with id |{}| not found", remote_id);
@@ -112,6 +114,7 @@ fn main() {
                     remote_id,
                     local_path,
                     remote_path,
+                    alias,
                 });
 
                 config.save();
@@ -121,9 +124,20 @@ fn main() {
                 config.save();
             }
         },
-        Commands::Sync { path_id } => {
-            let Some(path) = config.paths.iter().find(|path| path.id == path_id) else {
-                println!("[ ERROR ] path with id |{}| not found", path_id);
+        Commands::Sync { path_id, alias } => {
+            if path_id.is_none() && alias.is_none() {
+                println!("[ ERROR ] at least path_id or alias required");
+                return;
+            }
+
+            let path = path_id
+                .and_then(|id| config.paths.iter().find(|path| path.id == id))
+                .or_else(|| {
+                    alias.and_then(|alias| config.paths.iter().find(|path| path.alias == alias))
+                });
+
+            let Some(path) = path else {
+                println!("[ ERROR ] path not found with the given alias or id");
                 return;
             };
 
@@ -132,27 +146,51 @@ fn main() {
                 .iter()
                 .find(|remote| remote.id == path.remote_id)
             else {
-                println!("[ ERROR ] remote with id |{}| not found", path.remote_id);
+                println!("[ ERROR ] could not find remote");
                 return;
             };
 
-            let mut process = Command::new("rclone")
+            let process = Command::new("rclone")
                 .arg("sync")
                 .arg(&path.local_path)
                 .arg(format!("{}:{}", remote.remote_name, path.remote_path))
-                .spawn()
-                .expect("Failed to execute rclone");
+                .spawn();
 
-            process.wait().expect("Failed to wait for rclone");
+            match process {
+                Ok(mut child) => match child.wait() {
+                    Ok(status) => {
+                        if status.success() {
+                            println!(
+                                "[ SUCCESS ] synced |{}| to |{}:{}|",
+                                path.local_path, remote.remote_name, path.remote_path
+                            );
+                            return;
+                        }
 
-            println!(
-                "[ SUCCESS ] synced |{}| to |{}|",
-                path.local_path, path.remote_path
-            );
+                        println!(
+                            "[ ERROR ] failed to sync |{}| to |{}:{}|",
+                            path.local_path, remote.remote_name, path.remote_path
+                        )
+                    }
+                    Err(err) => eprintln!("[ ERROR ] failed to wait for rclone process: {}", err),
+                },
+                Err(err) => eprintln!("[ ERROR ] failed to execute rclone: {}", err),
+            }
         }
-        Commands::Pull { path_id } => {
-            let Some(path) = config.paths.iter().find(|path| path.id == path_id) else {
-                println!("[ ERROR ] path with id |{}| not found", path_id);
+        Commands::Pull { path_id, alias } => {
+            if path_id.is_none() && alias.is_none() {
+                println!("[ ERROR ] at least path_id or alias required");
+                return;
+            }
+
+            let path = path_id
+                .and_then(|id| config.paths.iter().find(|path| path.id == id))
+                .or_else(|| {
+                    alias.and_then(|alias| config.paths.iter().find(|path| path.alias == alias))
+                });
+
+            let Some(path) = path else {
+                println!("[ ERROR ] path not found with the given alias or id");
                 return;
             };
 
@@ -161,23 +199,36 @@ fn main() {
                 .iter()
                 .find(|remote| remote.id == path.remote_id)
             else {
-                println!("[ ERROR ] remote with id |{}| not found", path.remote_id);
+                println!("[ ERROR ] could not find remote");
                 return;
             };
 
-            let mut process = Command::new("rclone")
+            let process = Command::new("rclone")
                 .arg("sync")
                 .arg(format!("{}:{}", remote.remote_name, path.remote_path))
                 .arg(&path.local_path)
-                .spawn()
-                .expect("Failed to execute rclone");
+                .spawn();
 
-            process.wait().expect("Failed to wait for rclone");
+            match process {
+                Ok(mut child) => match child.wait() {
+                    Ok(status) => {
+                        if status.success() {
+                            println!(
+                                "[ SUCCESS ] synced |{}:{}| to |{}|",
+                                remote.remote_name, path.remote_path, path.local_path
+                            );
+                            return;
+                        }
 
-            println!(
-                "[ SUCCESS ] synced |{}| to |{}|",
-                path.remote_path, path.local_path
-            );
+                        println!(
+                            "[ ERROR ] failed to sync |{}:{}| to |{}|",
+                            remote.remote_name, path.remote_path, path.local_path
+                        )
+                    }
+                    Err(err) => eprintln!("[ ERROR ] failed to wait for rclone process: {}", err),
+                },
+                Err(err) => eprintln!("[ ERROR ] failed to execute rclone: {}", err),
+            }
         }
     }
 }

@@ -20,11 +20,17 @@ pub enum Commands {
     },
     Sync {
         #[arg(short, long)]
-        path_id: String,
+        path_id: Option<String>,
+
+        #[arg(short, long)]
+        alias: Option<String>,
     },
     Pull {
         #[arg(short, long)]
-        path_id: String,
+        path_id: Option<String>,
+
+        #[arg(short, long)]
+        alias: Option<String>,
     },
 }
 
@@ -65,6 +71,9 @@ pub enum PathCommand {
 
         #[arg(short = 'e', long)]
         remote_path: String,
+
+        #[arg(short, long)]
+        alias: String,
     },
     Remove {
         id: String,
