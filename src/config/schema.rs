@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Remote {
     pub id: String,
     pub remote_name: String,
     pub provider: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PathConfig {
     pub id: String,
     pub remote_id: String,
@@ -24,6 +24,26 @@ pub struct Config {
 
     #[serde(skip)]
     pub config_path: String,
+}
+
+impl Remote {
+    pub fn show(&self, max: Option<usize>) {
+        println!(
+            "|{}| {:<width$} ({})",
+            self.id,
+            self.remote_name,
+            self.provider,
+            width = max.unwrap_or(0)
+        );
+    }
+
+    pub fn max_length_name(remotes: &[Remote]) -> usize {
+        remotes
+            .iter()
+            .map(|remote| remote.remote_name.len())
+            .max()
+            .unwrap_or(20)
+    }
 }
 
 impl Config {
@@ -58,7 +78,7 @@ impl Config {
         };
 
         default_config.save();
-        
+
         default_config
     }
 

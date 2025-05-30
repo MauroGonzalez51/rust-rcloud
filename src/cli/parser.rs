@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "RCloud")]
-#[command(about="A CLI for managing RCloud", long_about=None)]
+#[command(about = "A CLI for managing RCloud", long_about=None)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -10,14 +10,19 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    #[command(about = "Manage Remotes")]
     Remote {
         #[command(subcommand)]
         action: RemoteCommand,
     },
+
+    #[command(about = "Manage Paths")]
     Path {
         #[command(subcommand)]
         action: PathCommand,
     },
+
+    #[command(about = "Sync to a Given Remote")]
     Sync {
         #[arg(short, long)]
         path_id: Option<String>,
@@ -25,6 +30,8 @@ pub enum Commands {
         #[arg(short, long)]
         alias: Option<String>,
     },
+
+    #[command(about = "Pull from a Given Remote")]
     Pull {
         #[arg(short, long)]
         path_id: Option<String>,
@@ -56,6 +63,16 @@ pub enum RemoteCommand {
 
         #[arg(short = 'p', long)]
         new_provider: Option<String>,
+    },
+    Find {
+        #[arg(short, long)]
+        id: Option<String>,
+
+        #[arg(short, long)]
+        name: Option<String>,
+
+        #[arg(long, help = "Use OR logic for filtering (default is AND)")]
+        or: bool
     },
 }
 

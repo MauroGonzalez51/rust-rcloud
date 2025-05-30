@@ -3,7 +3,7 @@ mod config;
 
 use clap::Parser;
 use cli::parser::{Cli, Commands, PathCommand, RemoteCommand};
-use config::schema::{Config, PathConfig, Remote};
+use config::schema::{Config, PathConfig};
 use dotenvy::dotenv;
 use std::{path::Path, process::Command};
 use uuid::Uuid;
@@ -21,55 +21,18 @@ fn main() {
 
     match cli.command {
         Commands::Remote { action } => match action {
-            RemoteCommand::List => {
-                let max = config
-                    .remotes
-                    .iter()
-                    .map(|remote| remote.remote_name.len())
-                    .max()
-                    .unwrap_or(20);
-
-                for remote in config.remotes.iter() {
-                    println!(
-                        "|{}| {:<width$} ({})",
-                        remote.id,
-                        remote.remote_name,
-                        remote.provider,
-                        width = max
-                    );
-                }
-            }
+            RemoteCommand::List => cli::commands::remote::Action::list(&config),
             RemoteCommand::Add { name, provider } => {
-                config.remotes.push(Remote {
-                    id: Uuid::new_v4().to_string(),
-                    remote_name: name,
-                    provider,
-                });
-                config.save();
+                cli::commands::remote::Action::add(&mut config, name, provider)
             }
-            RemoteCommand::Remove { id } => {
-                config.remotes.retain(|remote| remote.id != id);
-                config.save()
-            }
+            RemoteCommand::Remove { id } => cli::commands::remote::Action::remove(&mut config, id),
             RemoteCommand::Update {
                 id,
                 new_name,
                 new_provider,
-            } => {
-                if let Some(remote) = config.remotes.iter_mut().find(|remote| remote.id == id) {
-                    if let Some(name) = new_name {
-                        remote.remote_name = name;
-                    }
-
-                    if let Some(provider) = new_provider {
-                        remote.provider = provider
-                    }
-
-                    config.save();
-                    return;
-                }
-
-                println!("[ ERROR ] remote with id |{}| not found", id);
+            } => cli::commands::remote::Action::update(&mut config, id, new_name, new_provider),
+            RemoteCommand::Find { id, name, or } => {
+                cli::commands::remote::Action::find(&config, id, name, or)
             }
         },
         Commands::Path { action } => match action {
