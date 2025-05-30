@@ -150,7 +150,8 @@ fn main() {
                 return;
             };
 
-            let process = Command::new("rclone")
+            let rclone_path = std::env::var("RCLONE_PATH").unwrap_or_else(|_| "rclone".to_string());
+            let process = Command::new(rclone_path)
                 .arg("sync")
                 .arg(&path.local_path)
                 .arg(format!("{}:{}", remote.remote_name, path.remote_path))
@@ -203,7 +204,8 @@ fn main() {
                 return;
             };
 
-            let process = Command::new("rclone")
+            let rclone_path = std::env::var("RCLONE_PATH").unwrap_or_else(|_| "rclone".to_string());
+            let process = Command::new(rclone_path)
                 .arg("sync")
                 .arg(format!("{}:{}", remote.remote_name, path.remote_path))
                 .arg(&path.local_path)

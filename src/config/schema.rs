@@ -29,21 +29,37 @@ pub struct Config {
 impl Config {
     pub fn load(config_path: &str) -> Self {
         if Path::new(&config_path).exists() {
-            let mut config: Config = serde_json::from_str(
-                &fs::read_to_string(config_path).expect("Failed to read config file"),
-            )
-            .expect("Failed to parse config");
+            match serde_json::from_str::<Config>(
+                &fs::read_to_string(config_path).expect("[ ERROR ] failed to read config file"),
+            ) {
+                Ok(mut config) => {
+                    config.config_path = config_path.to_string();
+                    return config;
+                }
+                Err(_) => {
+                    eprintln!("[ ERROR ] failed to parse config, creating default config instead");
 
-            config.config_path = config_path.to_string();
+                    let default_config = Config {
+                        config_path: config_path.to_string(),
+                        paths: vec![],
+                        remotes: vec![],
+                    };
 
-            return config;
+                    default_config.save();
+                    return default_config;
+                }
+            }
         }
 
-        Config {
+        let default_config = Config {
+            config_path: config_path.to_string(),
             remotes: vec![],
             paths: vec![],
-            config_path: config_path.to_string(),
-        }
+        };
+
+        default_config.save();
+        
+        default_config
     }
 
     pub fn save(&self) {
