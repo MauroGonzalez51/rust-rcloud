@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 clap = { version = "4.5.50", features = ["derive", "env"] }
+console = "0.16.1"
 dotenvy = "0.15.7"
 fs2 = "0.4.3"
 inquire = "0.9.1"

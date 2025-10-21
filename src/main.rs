@@ -1,8 +1,9 @@
 mod cli;
 mod config;
+mod utils;
 
 use clap::Parser;
-use cli::parser::Args;
+use cli::{commands::remote, parser::Args, parser::Commands};
 use config::prelude::*;
 
 use dotenvy::dotenv;
@@ -54,6 +55,17 @@ fn main() -> std::io::Result<()> {
             }
         },
     };
+
+    match &args.command {
+        Commands::Remote { action } => match action {
+            cli::commands::remote::command::RemoteCommand::List => {
+                remote::handlers::list::remote_list(&args, &registry)
+            }
+            cli::commands::remote::command::RemoteCommand::Add { name, provider } => {
+                remote::handlers::add::remote_add(&args, &registry, name, provider)
+            }
+        },
+    }
 
     Ok(())
 }

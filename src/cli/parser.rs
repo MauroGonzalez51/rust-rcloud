@@ -1,6 +1,7 @@
+use crate::cli::commands::remote::command::RemoteCommand;
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -31,4 +32,16 @@ pub struct Args {
         env = "RUST_RCLOUD_REGISTRY",
     )]
     pub registry: Option<PathBuf>,
+
+    #[command(subcommand)]
+    pub command: Commands,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum Commands {
+    #[command(about = "Manage Remotes")]
+    Remote {
+        #[command(subcommand)]
+        action: RemoteCommand,
+    },
 }
