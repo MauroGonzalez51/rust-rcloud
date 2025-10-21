@@ -50,7 +50,11 @@ impl Config {
         };
 
         let mut contents = String::new();
-        let _ = file.read_to_string(&mut contents);
+
+        match file.read_to_string(&mut contents) {
+            Ok(_) => {}
+            Err(error) => return Err(ConfigError::Io(error)),
+        };
 
         if contents.is_empty() {
             return Ok(Config {
