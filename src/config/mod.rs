@@ -1,3 +1,4 @@
-pub mod path_config;
-pub mod remote;
-pub mod schema;
+mod config_loader;
+mod path_config;
+pub mod prelude;
+mod remote;

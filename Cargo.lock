@@ -81,6 +81,7 @@ dependencies = [
  "dotenvy",
  "serde",
  "serde_json",
+ "transaction",
  "uuid",
 ]
 
@@ -132,6 +133,12 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "transaction"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5c15bb309273b28bc559abfecd4c1ae0482ddfdc2f0402a9f6a79f3ab6a76c7"
 
 [[package]]
 name = "unicode-ident"
