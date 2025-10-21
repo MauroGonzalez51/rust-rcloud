@@ -5,8 +5,7 @@ use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use transaction::prelude::*;
 
-pub type RegistryTx<'a, T> =
-    Box<dyn Transaction<Ctx = Registry, Item = T, Err = RegistryError> + 'a>;
+type RegistryTx<'a, T> = Box<dyn Transaction<Ctx = Registry, Item = T, Err = RegistryError> + 'a>;
 
 #[derive(Debug)]
 pub enum RegistryError {
