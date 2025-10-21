@@ -30,5 +30,7 @@ fn main() -> std::io::Result<()> {
         },
     };
 
+    println!("{:?}", registry);
+
     Ok(())
 }

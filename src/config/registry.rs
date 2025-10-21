@@ -1,3 +1,4 @@
+use super::remote::Remote;
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
@@ -30,6 +31,8 @@ impl From<serde_json::Error> for RegistryError {
 pub struct Registry {
     #[serde(skip)]
     pub config_path: PathBuf,
+
+    pub remotes: Vec<Remote>,
 }
 
 impl Registry {
@@ -37,7 +40,7 @@ impl Registry {
         let mut file = match OpenOptions::new()
             .read(true)
             .write(true)
-            .truncate(true)
+            .truncate(false)
             .create(true)
             .open(config_path)
         {
@@ -63,9 +66,14 @@ impl Registry {
         }
 
         if contents.is_empty() {
-            return Ok(Registry {
+            let mut result = Registry {
                 config_path: config_path.into(),
-            });
+                remotes: vec![],
+            };
+
+            result.save()?;
+
+            return Ok(result);
         }
 
         match serde_json::from_str::<Registry>(&contents) {
@@ -100,7 +108,7 @@ impl Registry {
     fn save(&mut self) -> Result<(), RegistryError> {
         let mut file = match OpenOptions::new()
             .write(true)
-            .truncate(true)
+            .truncate(false)
             .open(&self.config_path)
         {
             Err(err) => return Err(RegistryError::Io(err)),
