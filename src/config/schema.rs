@@ -1,49 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Remote {
-    pub id: String,
-    pub remote_name: String,
-    pub provider: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct PathConfig {
-    pub id: String,
-    pub remote_id: String,
-    pub local_path: String,
-    pub remote_path: String,
-    pub alias: String,
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
-    pub remotes: Vec<Remote>,
-    pub paths: Vec<PathConfig>,
-
     #[serde(skip)]
     pub config_path: String,
-}
-
-impl Remote {
-    pub fn show(&self, max: Option<usize>) {
-        println!(
-            "|{}| {:<width$} ({})",
-            self.id,
-            self.remote_name,
-            self.provider,
-            width = max.unwrap_or(0)
-        );
-    }
-
-    pub fn max_length_name(remotes: &[Remote]) -> usize {
-        remotes
-            .iter()
-            .map(|remote| remote.remote_name.len())
-            .max()
-            .unwrap_or(20)
-    }
 }
 
 impl Config {
@@ -61,8 +22,6 @@ impl Config {
 
                     let default_config = Config {
                         config_path: config_path.to_string(),
-                        paths: vec![],
-                        remotes: vec![],
                     };
 
                     default_config.save();
@@ -73,8 +32,6 @@ impl Config {
 
         let default_config = Config {
             config_path: config_path.to_string(),
-            remotes: vec![],
-            paths: vec![],
         };
 
         default_config.save();
