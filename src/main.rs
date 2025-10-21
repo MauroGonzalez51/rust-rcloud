@@ -13,7 +13,7 @@ fn main() -> std::io::Result<()> {
 
     let config_path =
         std::env::var("RUST_RCLOUD_CONFIG").expect("[ CRIT ] RUST_RCLOUD_CONFIG is not set");
-    let config = Config::load(&config_path).expect("[ Error ] could not parse config");
+    let registry = Registry::load(&config_path).expect("[ Error ] could not parse config");
 
     Ok(())
 }

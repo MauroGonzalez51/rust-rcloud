@@ -1,1 +1,1 @@
-pub use super::config_loader::{Config, ConfigError};
+pub use super::registry::{Registry, RegistryError};
