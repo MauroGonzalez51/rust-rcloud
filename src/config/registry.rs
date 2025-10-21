@@ -6,6 +6,7 @@ use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use transaction::prelude::*;
 
+#[allow(dead_code)]
 type RegistryTx<'a, T> = Box<dyn Transaction<Ctx = Registry, Item = T, Err = RegistryError> + 'a>;
 
 #[derive(Debug)]
@@ -30,19 +31,19 @@ impl From<serde_json::Error> for RegistryError {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Registry {
     #[serde(skip)]
-    pub config_path: PathBuf,
+    pub registry_path: PathBuf,
 
     pub remotes: Vec<Remote>,
 }
 
 impl Registry {
-    pub fn load(config_path: &String) -> Result<Self, RegistryError> {
+    pub fn load(registry_path: &PathBuf) -> Result<Self, RegistryError> {
         let mut file = match OpenOptions::new()
             .read(true)
             .write(true)
             .truncate(false)
             .create(true)
-            .open(config_path)
+            .open(registry_path)
         {
             Err(_) => {
                 return Err(RegistryError::Custom(
@@ -67,7 +68,7 @@ impl Registry {
 
         if contents.is_empty() {
             let mut result = Registry {
-                config_path: config_path.into(),
+                registry_path: registry_path.into(),
                 remotes: vec![],
             };
 
@@ -78,13 +79,14 @@ impl Registry {
 
         match serde_json::from_str::<Registry>(&contents) {
             Ok(mut loaded) => {
-                loaded.config_path = config_path.into();
+                loaded.registry_path = registry_path.into();
                 Ok(loaded)
             }
             Err(err) => Err(RegistryError::Serde(err)),
         }
     }
 
+    #[allow(dead_code)]
     pub fn tx<'a, F, T>(self, f: F) -> RegistryTx<'a, T>
     where
         F: Fn(&mut Registry) -> T + 'a,
@@ -109,7 +111,7 @@ impl Registry {
         let mut file = match OpenOptions::new()
             .write(true)
             .truncate(false)
-            .open(&self.config_path)
+            .open(&self.registry_path)
         {
             Err(err) => return Err(RegistryError::Io(err)),
             Ok(file) => file,

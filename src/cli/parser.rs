@@ -1,0 +1,34 @@
+use std::path::PathBuf;
+
+use clap::Parser;
+
+#[derive(Debug, Parser)]
+#[command(
+    author,
+    version,
+    about = "rust-rcloud CLI",
+    arg_required_else_help = true
+)]
+pub struct Args {
+    #[arg(
+        short,
+        long,
+        action = clap::ArgAction::Count,
+        help = "Verbose (incremental)", 
+        help_heading = "GLOBAL OPTIONS", 
+        global = true,
+    )]
+    pub verbose: u8,
+
+    #[arg(
+        short = 'c',
+        long = "registry",
+        value_name = "FILE",
+        help = "Registry File",
+        help_heading = "GLOBAL OPTIONS",
+        global = true,
+        value_parser = clap::value_parser!(PathBuf),
+        env = "RUST_RCLOUD_REGISTRY",
+    )]
+    pub registry: Option<PathBuf>,
+}

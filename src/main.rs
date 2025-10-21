@@ -1,5 +1,8 @@
+mod cli;
 mod config;
 
+use clap::Parser;
+use cli::parser::Args;
 use config::prelude::*;
 
 use dotenvy::dotenv;
@@ -11,10 +14,32 @@ fn main() -> std::io::Result<()> {
         std::env::set_var("RUST_BACKTRACE", "1");
     }
 
-    let config_path =
-        std::env::var("RUST_RCLOUD_CONFIG").expect("[ CRIT ] RUST_RCLOUD_CONFIG is not set");
+    let args = Args::parse();
 
-    let registry = match Registry::load(&config_path) {
+    let registry_path = match args.registry.clone() {
+        Some(path) => {
+            if path.is_dir() {
+                eprintln!("[ ERROR ] registry must be a file");
+
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::IsADirectory,
+                    "[ ERROR ] registry must be a file",
+                ));
+            }
+
+            path
+        }
+        None => {
+            eprintln!("[ ERROR ] registry file not especified");
+
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "[ ERROR ] registry file not specified",
+            ));
+        }
+    };
+
+    let registry = match Registry::load(&registry_path) {
         Ok(value) => value,
         Err(err) => match err {
             RegistryError::Io(err) => return Err(err),
@@ -29,8 +54,6 @@ fn main() -> std::io::Result<()> {
             }
         },
     };
-
-    println!("{:?}", registry);
 
     Ok(())
 }
