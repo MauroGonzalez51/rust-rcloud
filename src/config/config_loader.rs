@@ -1,8 +1,9 @@
-use std::io::{self, Read};
-
+use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
+use std::io::{self, Read};
 use std::path::PathBuf;
+
 // use transaction::prelude::*;
 
 // pub type ConfigTx<'a, T> = Box<dyn Transaction<Ctx = Config, Item = T, Err = ConfigError> + 'a>;
@@ -37,8 +38,8 @@ impl Config {
         let mut file = match OpenOptions::new()
             .read(true)
             .write(true)
-            .create(true)
             .truncate(true)
+            .create(true)
             .open(config_path)
         {
             Err(_) => {
@@ -49,12 +50,18 @@ impl Config {
             Ok(file) => file,
         };
 
-        let mut contents = String::new();
+        if let Err(err) = file.lock_exclusive() {
+            return Err(ConfigError::Io(err));
+        }
 
-        match file.read_to_string(&mut contents) {
-            Ok(_) => {}
-            Err(error) => return Err(ConfigError::Io(error)),
-        };
+        let mut contents = String::new();
+        if let Err(err) = file.read_to_string(&mut contents) {
+            return Err(ConfigError::Io(err));
+        }
+
+        if let Err(err) = fs2::FileExt::unlock(&file) {
+            return Err(ConfigError::Io(err));
+        }
 
         if contents.is_empty() {
             return Ok(Config {
@@ -62,9 +69,13 @@ impl Config {
             });
         }
 
-        let loaded: Config = serde_json::from_str(&contents)?;
-
-        Ok(loaded)
+        match serde_json::from_str::<Config>(&contents) {
+            Ok(mut loaded) => {
+                loaded.config_path = config_path.into();
+                Ok(loaded)
+            }
+            Err(err) => Err(ConfigError::Serde(err)),
+        }
     }
 }
 
