@@ -108,7 +108,7 @@ impl Registry {
     fn save(&mut self) -> anyhow::Result<()> {
         let mut file = OpenOptions::new()
             .write(true)
-            .truncate(false)
+            .truncate(true)
             .open(&self.registry_path)
             .context("failed to open registry file")?;
 

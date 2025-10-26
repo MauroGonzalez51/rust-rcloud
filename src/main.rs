@@ -36,6 +36,9 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
             cli::commands::remote::command::RemoteCommand::Add { name, provider } => {
                 remote::handlers::add::remote_add(&args, &mut registry, name, provider)?
             }
+            cli::commands::remote::command::RemoteCommand::Remove { id } => {
+                remote::handlers::remove::remote_remove(&args, &mut registry, id)?
+            }
         },
     }
 

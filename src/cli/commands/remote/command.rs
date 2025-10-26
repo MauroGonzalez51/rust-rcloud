@@ -8,6 +8,10 @@ pub enum RemoteCommand {
         name: Option<String>,
 
         #[arg(long)]
-        provider: Option<String>
-    }
+        provider: Option<String>,
+    },
+    Remove {
+        #[arg(long)]
+        id: Option<String>,
+    },
 }
