@@ -2,48 +2,31 @@ mod cli;
 mod config;
 mod utils;
 
+use anyhow::{Context, bail};
 use clap::Parser;
 use cli::{commands::remote, parser::Args, parser::Commands};
 use config::prelude::*;
 
 use dotenvy::dotenv;
 
-fn main() -> std::io::Result<()> {
-    dotenv().ok();
+use crate::utils::logger::LOG;
 
-    unsafe {
-        std::env::set_var("RUST_BACKTRACE", "1");
-    }
-
+fn run() -> anyhow::Result<(), anyhow::Error> {
     let args = Args::parse();
 
-    let registry_path = match args.registry.clone() {
-        Some(path) => {
-            if path.is_dir() {
-                eprintln!("[ ERROR ] registry must be a file");
+    let registry_path = args
+        .registry
+        .clone()
+        .ok_or_else(|| anyhow::anyhow!("registry file not especified"))?;
 
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::IsADirectory,
-                    "[ ERROR ] registry must be a file",
-                ));
-            }
+    if registry_path.is_dir() {
+        bail!(
+            "registry must be a file, not a directory: {}",
+            registry_path.display()
+        );
+    }
 
-            path
-        }
-        None => {
-            eprintln!("[ ERROR ] registry file not especified");
-
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "[ ERROR ] registry file not specified",
-            ));
-        }
-    };
-
-    let mut registry = match Registry::load(&registry_path) {
-        Ok(value) => value,
-        Err(err) => return Err(std::io::Error::new(std::io::ErrorKind::Other, err)),
-    };
+    let mut registry = Registry::load(&registry_path).context("failed to load registry")?;
 
     match &args.command {
         Commands::Remote { action } => match action {
@@ -51,10 +34,24 @@ fn main() -> std::io::Result<()> {
                 remote::handlers::list::remote_list(&args, &registry)
             }
             cli::commands::remote::command::RemoteCommand::Add { name, provider } => {
-                remote::handlers::add::remote_add(&args, &mut registry, name, provider)
+                remote::handlers::add::remote_add(&args, &mut registry, name, provider)?
             }
         },
     }
 
     Ok(())
+}
+
+fn main() {
+    dotenv().ok();
+
+    #[cfg(debug_assertions)]
+    unsafe {
+        std::env::set_var("RUST_BACKTRACE", "1");
+    }
+
+    if let Err(err) = run() {
+        LOG.with_context(&err);
+        std::process::exit(1);
+    }
 }

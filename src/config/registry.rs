@@ -1,44 +1,35 @@
 use super::remote::Remote;
+use crate::{log_info, log_warn};
+use anyhow::{Context, bail};
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
-use std::io::{self, Read, Write};
+use std::io::{Read, Write};
 use std::path::PathBuf;
+use thiserror::Error;
 use transaction::prelude::*;
 
 #[allow(dead_code)]
 type RegistryTx<'a, T> = Box<dyn Transaction<Ctx = Registry, Item = T, Err = RegistryError> + 'a>;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum RegistryError {
-    Io(io::Error),
-    Serde(serde_json::Error),
+    #[error("failed to read/write registry file")]
+    Io(#[from] std::io::Error),
+
+    #[error("registry file is corrupted or has invalid format")]
+    Serde(#[from] serde_json::Error),
+
+    #[allow(dead_code)]
+    #[error("{0}")]
     Custom(String),
-}
 
-impl From<io::Error> for RegistryError {
-    fn from(value: io::Error) -> Self {
-        RegistryError::Io(value)
-    }
+    #[error("registry is corrupted")]
+    Corrupted {
+        #[source]
+        source: serde_json::Error,
+    },
 }
-
-impl From<serde_json::Error> for RegistryError {
-    fn from(value: serde_json::Error) -> Self {
-        RegistryError::Serde(value)
-    }
-}
-
-impl std::fmt::Display for RegistryError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RegistryError::Io(err) => write!(f, "[ ERROR ] (io) {}", err),
-            RegistryError::Serde(err) => write!(f, "[ ERROR ] (serde) {}", err),
-            RegistryError::Custom(err) => write!(f, "[ ERROR ] {}", err),
-        }
-    }
-}
-
-impl std::error::Error for RegistryError {}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Registry {
@@ -50,98 +41,88 @@ pub struct Registry {
 }
 
 impl Registry {
-    pub fn load(registry_path: &PathBuf) -> Result<Self, RegistryError> {
-        let mut file = match OpenOptions::new()
+    pub fn load(registry_path: &PathBuf) -> anyhow::Result<Self> {
+        let mut file = OpenOptions::new()
             .read(true)
             .write(true)
-            .truncate(false)
             .create(true)
+            .truncate(false)
             .open(registry_path)
-        {
-            Err(_) => {
-                return Err(RegistryError::Custom(
-                    "[ Error ] Failed to open file".to_string(),
-                ));
-            }
-            Ok(file) => file,
-        };
+            .context("failed to open registry file")?;
 
-        if let Err(err) = file.lock_exclusive() {
-            return Err(RegistryError::Io(err));
-        }
+        file.lock_exclusive()
+            .context("failed to acquire lock on registry")?;
 
         let mut contents = String::new();
-        if let Err(err) = file.read_to_string(&mut contents) {
-            return Err(RegistryError::Io(err));
-        }
+        file.read_to_string(&mut contents)
+            .context("failed to read registry contents")?;
 
-        if let Err(err) = fs2::FileExt::unlock(&file) {
-            return Err(RegistryError::Io(err));
-        }
+        fs2::FileExt::unlock(&file).context("failed to release lock on registry")?;
 
-        if contents.is_empty() {
-            let mut result = Registry {
-                registry_path: registry_path.into(),
+        if contents.trim().is_empty() {
+            log_warn!("registry file is empty, creating new one");
+
+            let mut registry = Registry {
+                registry_path: registry_path.clone(),
                 remotes: vec![],
             };
 
-            result.save()?;
+            registry.save().context("failed to save new registry")?;
 
-            return Ok(result);
+            return Ok(registry);
         }
 
         match serde_json::from_str::<Registry>(&contents) {
             Ok(mut loaded) => {
-                loaded.registry_path = registry_path.into();
+                loaded.registry_path = registry_path.clone();
+                log_info!("file loaded");
                 Ok(loaded)
             }
-            Err(err) => Err(RegistryError::Serde(err)),
+            Err(err) => {
+                bail!(RegistryError::Corrupted { source: err })
+            }
         }
     }
 
     #[allow(dead_code)]
-    pub fn tx<F, T>(&mut self, function: F) -> Result<T, RegistryError>
+    pub fn tx<F, T>(&mut self, function: F) -> anyhow::Result<()>
     where
         F: FnOnce(&mut Registry) -> T,
     {
+        log_info!("executing transaction in registry file");
+
         let backup = self.clone();
-        let result = function(self);
+
+        function(self);
 
         match self.save() {
-            Ok(_) => Ok(result),
-            Err(err) => {
+            Ok(_) => {}
+            Err(_err) => {
                 *self = backup;
-                Err(err)
             }
-        }
+        };
+
+        Ok(())
     }
 
-    fn save(&mut self) -> Result<(), RegistryError> {
-        let mut file = match OpenOptions::new()
+    fn save(&mut self) -> anyhow::Result<()> {
+        let mut file = OpenOptions::new()
             .write(true)
             .truncate(false)
             .open(&self.registry_path)
-        {
-            Err(err) => return Err(RegistryError::Io(err)),
-            Ok(file) => file,
-        };
+            .context("failed to open registry file")?;
 
-        if let Err(err) = file.lock_exclusive() {
-            return Err(RegistryError::Io(err));
-        }
+        file.lock_exclusive()
+            .context("failed to acquire lock on registry")?;
 
-        let contents = match serde_json::to_string_pretty(&self) {
-            Ok(json) => json,
-            Err(err) => return Err(RegistryError::Serde(err)),
-        };
+        let contents = serde_json::to_string_pretty(&self).context("failed to parse contents")?;
 
-        if let Err(err) = fs2::FileExt::unlock(&file) {
-            return Err(RegistryError::Io(err));
-        }
+        fs2::FileExt::unlock(&file).context("failed to release lock on registry")?;
 
-        if let Err(err) = file.write_all(contents.as_bytes()) {
-            return Err(RegistryError::Io(err));
-        }
+        log_info!("saving file");
+
+        file.write_all(contents.as_bytes())
+            .context("failed to write contents to file")?;
 
         Ok(())
     }

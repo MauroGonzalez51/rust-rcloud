@@ -33,6 +33,16 @@ pub struct Args {
     )]
     pub registry: Option<PathBuf>,
 
+    #[arg(
+        short = 'd',
+        long = "debug",
+        help = "Debug Mode",
+        help_heading = "GLOBAL OPTIONS",
+        global = true,
+        env = "RUST_RCLOUD_DEBUG"
+    )]
+    pub debug: bool,
+
     #[command(subcommand)]
     pub command: Commands,
 }
