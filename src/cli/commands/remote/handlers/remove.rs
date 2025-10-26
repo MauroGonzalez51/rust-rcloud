@@ -29,6 +29,9 @@ pub fn remote_remove(
             let display_options = options.iter().map(|(display, _)| display.clone()).collect();
 
             let selected = Select::new("Select remote to remove", display_options)
+                .with_vim_mode(true)
+                .with_page_size(10)
+                .with_help_message("<remote_name> (<remote_provider>) [<...remote_id>]")
                 .prompt()
                 .context("failed to select remote")?;
 
