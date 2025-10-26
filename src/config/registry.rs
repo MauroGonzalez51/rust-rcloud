@@ -28,11 +28,24 @@ impl From<serde_json::Error> for RegistryError {
     }
 }
 
+impl std::fmt::Display for RegistryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RegistryError::Io(err) => write!(f, "[ ERROR ] (io) {}", err),
+            RegistryError::Serde(err) => write!(f, "[ ERROR ] (serde) {}", err),
+            RegistryError::Custom(err) => write!(f, "[ ERROR ] {}", err),
+        }
+    }
+}
+
+impl std::error::Error for RegistryError {}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Registry {
     #[serde(skip)]
     pub registry_path: PathBuf,
 
+    #[serde(default)]
     pub remotes: Vec<Remote>,
 }
 
@@ -87,24 +100,20 @@ impl Registry {
     }
 
     #[allow(dead_code)]
-    pub fn tx<'a, F, T>(self, f: F) -> RegistryTx<'a, T>
+    pub fn tx<F, T>(&mut self, function: F) -> Result<T, RegistryError>
     where
-        F: Fn(&mut Registry) -> T + 'a,
-        T: 'a,
+        F: FnOnce(&mut Registry) -> T,
     {
-        with_ctx(move |ctx: &mut Registry| {
-            let backup = ctx.clone();
+        let backup = self.clone();
+        let result = function(self);
 
-            let result = f(ctx);
-
-            if let Err(err) = ctx.save() {
-                *ctx = backup;
-                return Err(err);
+        match self.save() {
+            Ok(_) => Ok(result),
+            Err(err) => {
+                *self = backup;
+                Err(err)
             }
-
-            Ok(result)
-        })
-        .boxed()
+        }
     }
 
     fn save(&mut self) -> Result<(), RegistryError> {

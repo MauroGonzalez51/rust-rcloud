@@ -40,20 +40,9 @@ fn main() -> std::io::Result<()> {
         }
     };
 
-    let registry = match Registry::load(&registry_path) {
+    let mut registry = match Registry::load(&registry_path) {
         Ok(value) => value,
-        Err(err) => match err {
-            RegistryError::Io(err) => return Err(err),
-            RegistryError::Serde(err) => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    format!("config parse error: {}", err),
-                ));
-            }
-            RegistryError::Custom(err) => {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, err));
-            }
-        },
+        Err(err) => return Err(std::io::Error::new(std::io::ErrorKind::Other, err)),
     };
 
     match &args.command {
@@ -62,7 +51,7 @@ fn main() -> std::io::Result<()> {
                 remote::handlers::list::remote_list(&args, &registry)
             }
             cli::commands::remote::command::RemoteCommand::Add { name, provider } => {
-                remote::handlers::add::remote_add(&args, &registry, name, provider)
+                remote::handlers::add::remote_add(&args, &mut registry, name, provider)
             }
         },
     }
