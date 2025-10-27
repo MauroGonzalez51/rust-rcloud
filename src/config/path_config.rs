@@ -6,5 +6,4 @@ pub struct PathConfig {
     pub remote_id: String,
     pub local_path: String,
     pub remote_path: String,
-    pub alias: String,
 }

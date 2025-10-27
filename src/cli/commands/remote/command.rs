@@ -14,4 +14,14 @@ pub enum RemoteCommand {
         #[arg(long)]
         id: Option<String>,
     },
+    Update {
+        #[arg(long)]
+        id: Option<String>,
+
+        #[arg(long)]
+        name: Option<String>,
+
+        #[arg(long)]
+        provider: Option<String>,
+    },
 }

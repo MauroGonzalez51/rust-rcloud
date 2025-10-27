@@ -17,6 +17,7 @@ pub fn remote_add(
             .with_help_message(
                 "Must be the same that you inserted when configuring the remote in 'rcloud'",
             )
+            .with_validator(inquire::validator::MinLengthValidator::new(1))
             .prompt()
             .context("failed to create text prompt")?
             .clone(),
@@ -24,7 +25,8 @@ pub fn remote_add(
 
     let provider = match provider {
         Some(value) => value,
-        None => &Text::new("Provide the Remote Provider:")
+        None => &Text::new("Provide the remote provider:")
+            .with_validator(inquire::validator::MinLengthValidator::new(1))
             .prompt()
             .context("failed to create text prompt")?
             .clone(),
