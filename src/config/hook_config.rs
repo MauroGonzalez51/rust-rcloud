@@ -8,6 +8,7 @@ pub enum HookType {
     Pull,
     Both,
 }
+
 pub trait Hook: std::fmt::Debug + Send + Sync {
     fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext>;
     fn name(&self) -> &'static str;
@@ -16,18 +17,25 @@ pub trait Hook: std::fmt::Debug + Send + Sync {
 
 #[derive(Debug, Clone)]
 pub struct HookContext {
-    pub file_path: PathBuf,
-    pub content: Option<Vec<u8>>,
+    pub path: PathBuf,
     pub metadata: std::collections::HashMap<String, String>,
 }
 
 impl HookContext {
-    pub fn new(file_path: PathBuf) -> Self {
+    pub fn new(path: PathBuf) -> Self {
         Self {
-            file_path,
-            content: None,
+            path,
             metadata: std::collections::HashMap::new(),
         }
+    }
+
+    pub fn with_metadata(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.metadata.insert(key.into(), value.into());
+        self
+    }
+
+    pub fn file_exists(&self) -> bool {
+        self.path.exists()
     }
 }
 
@@ -37,9 +45,9 @@ pub enum HookConfig {
     Zip(ZipHookConfig),
 }
 
-impl Into<Box<dyn Hook>> for HookConfig {
-    fn into(self) -> Box<dyn Hook> {
-        match self {
+impl From<HookConfig> for Box<dyn Hook> {
+    fn from(val: HookConfig) -> Self {
+        match val {
             HookConfig::Zip(cfg) => Box::new(ZipHook::from(cfg)),
         }
     }

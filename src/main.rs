@@ -51,6 +51,9 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
             } => {
                 todo!()
             }
+            cli::commands::path::command::PathCommand::List => {
+                todo!()
+            }
         },
     }
 
