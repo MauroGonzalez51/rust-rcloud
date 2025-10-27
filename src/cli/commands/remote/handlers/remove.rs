@@ -1,6 +1,9 @@
-use crate::{cli::parser::Args, config::prelude::Registry, log_info, log_success, log_warn};
+use crate::{
+    cli::{commands::remote::utils::remote, parser::Args},
+    config::prelude::Registry,
+    log_info, log_success, log_warn,
+};
 use anyhow::Context;
-use inquire::Select;
 
 pub fn remote_remove(
     _args: &Args,
@@ -12,56 +15,33 @@ pub fn remote_remove(
         return Ok(());
     }
 
-    let id = match id {
-        Some(value) => value,
-        None => {
-            let options: Vec<(String, String)> = registry
-                .remotes
-                .iter()
-                .map(|r| {
-                    (
-                        format!("{} ({}) [{}]", r.remote_name, r.provider, &r.id[..8]),
-                        r.id.clone(),
-                    )
-                })
-                .collect();
+    let remote = match id {
+        Some(value) => {
+            if !registry.remotes.iter().any(|r| r.id == *value) {
+                anyhow::bail!("remote with '{}' not found", value);
+            }
 
-            let display_options = options.iter().map(|(display, _)| display.clone()).collect();
-
-            let selected = Select::new("Select remote to remove", display_options)
-                .with_vim_mode(true)
-                .with_page_size(10)
-                .with_help_message("<remote_name> (<remote_provider>) [<...remote_id>]")
-                .prompt()
-                .context("failed to select remote")?;
-
-            &options
-                .into_iter()
-                .find(|(display, _)| *display == selected)
-                .map(|(_, id)| id)
-                .ok_or_else(|| anyhow::anyhow!("failed to find selected remote"))?
+            remote::Utils::remote_by_id(registry, value).context("remote not found")?
         }
+        None => remote::Prompt::remote::<fn(inquire::Select<String>) -> inquire::Select<String>>(
+            registry, None,
+        )
+        .context("failed to execute prompt")?,
     };
-
-    let remote_info = registry
-        .remotes
-        .iter()
-        .find(|r| r.id == *id)
-        .ok_or_else(|| anyhow::anyhow!("remote with id '{}' not found", id))?;
 
     log_info!(
         "removing remote: {} ({})",
-        remote_info.remote_name,
-        remote_info.provider
+        remote.remote_name,
+        remote.provider
     );
 
     registry
         .tx(|rgx| {
-            rgx.remotes.retain(|r| r.id != *id);
+            rgx.remotes.retain(|r| r.id != remote.id);
         })
         .context("failed to execute transaction")?;
 
-    log_success!("remote removed succesfully");
+    log_success!("remote removed successfully");
 
     Ok(())
 }

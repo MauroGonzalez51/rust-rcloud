@@ -1,8 +1,9 @@
-use crate::config::prelude::Remote;
-use crate::log_success;
-use crate::{cli::parser::Args, config::prelude::Registry};
+use crate::{
+    cli::{commands::remote::utils::remote, parser::Args},
+    config::prelude::{Registry, Remote},
+    log_success,
+};
 use anyhow::Context;
-use inquire::Text;
 use uuid::Uuid;
 
 pub fn remote_add(
@@ -13,22 +14,20 @@ pub fn remote_add(
 ) -> anyhow::Result<()> {
     let name = match name {
         Some(value) => value,
-        None => &Text::new("Provide the remote name:")
+        None => &remote::Prompt::name()
             .with_help_message(
                 "Must be the same that you inserted when configuring the remote in 'rcloud'",
             )
-            .with_validator(inquire::validator::MinLengthValidator::new(1))
             .prompt()
-            .context("failed to create text prompt")?
+            .context("failed to create prompt")?
             .clone(),
     };
 
     let provider = match provider {
         Some(value) => value,
-        None => &Text::new("Provide the remote provider:")
-            .with_validator(inquire::validator::MinLengthValidator::new(1))
+        None => &remote::Prompt::provider()
             .prompt()
-            .context("failed to create text prompt")?
+            .context("failed to create prompt")?
             .clone(),
     };
 

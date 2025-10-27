@@ -1,4 +1,4 @@
-use crate::cli::commands::remote::command::RemoteCommand;
+use crate::cli::commands::{path::command::PathCommand, remote::command::RemoteCommand};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
@@ -53,5 +53,10 @@ pub enum Commands {
     Remote {
         #[command(subcommand)]
         action: RemoteCommand,
+    },
+    #[command(about = "Manage Paths")]
+    Path {
+        #[command(subcommand)]
+        action: PathCommand,
     },
 }

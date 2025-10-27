@@ -43,6 +43,15 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                 remote::handlers::update::remote_update(&args, &mut registry, id, name, provider)?
             }
         },
+        Commands::Path { action } => match action {
+            cli::commands::path::command::PathCommand::Add {
+                remote_id,
+                local_path,
+                remote_path,
+            } => {
+                todo!()
+            }
+        },
     }
 
     Ok(())
