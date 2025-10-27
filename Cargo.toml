@@ -11,6 +11,7 @@ dotenvy = "0.15.7"
 fs2 = "0.4.3"
 inquire = "0.9.1"
 lazy_static = "1.5.0"
+paste = "1.0.15"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 thiserror = "2.0.17"

@@ -1,3 +1,4 @@
+use crate::config::hook_config::HookConfig;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -6,4 +7,7 @@ pub struct PathConfig {
     pub remote_id: String,
     pub local_path: String,
     pub remote_path: String,
+
+    #[serde(default)]
+    pub hooks: Vec<HookConfig>,
 }

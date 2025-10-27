@@ -2,6 +2,7 @@ use clap::Subcommand;
 
 #[derive(Debug, Subcommand)]
 pub enum PathCommand {
+    List,
     Add {
         #[arg(long)]
         remote_id: Option<String>,
