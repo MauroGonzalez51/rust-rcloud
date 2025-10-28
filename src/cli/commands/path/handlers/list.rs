@@ -1,8 +1,13 @@
 use console::Style;
 
-use crate::{cli::parser::Args, config::prelude::*};
+use crate::{cli::parser::Args, config::prelude::*, log_warn};
 
 pub fn path_list(_args: &Args, registry: &Registry) {
+    if registry.paths.is_empty() {
+        log_warn!("no paths configured");
+        return;
+    }
+
     let idx_style = Style::new().bold().cyan();
     let local_style = Style::new().green();
     let arrow_style = Style::new().bold().yellow();

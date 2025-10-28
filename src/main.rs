@@ -64,6 +64,9 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                 local_path,
                 remote_path,
             )?,
+            cli::commands::path::command::PathCommand::Remove { id } => {
+                commands::path::handlers::remove::path_remove(&args, &mut registry, id)?
+            }
         },
     }
 

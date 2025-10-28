@@ -50,12 +50,7 @@ impl Prompt {
             .map(|(_, id)| id)
             .ok_or_else(|| anyhow::anyhow!("failed to find selected remote"))?;
 
-        registry
-            .remotes
-            .iter()
-            .find(|r| r.id == *selected_id)
-            .cloned()
-            .ok_or_else(|| anyhow::anyhow!("remote not found"))
+        Utils::remote_by_id(registry, selected_id)
     }
 }
 

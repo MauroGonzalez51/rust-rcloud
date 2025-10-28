@@ -13,4 +13,8 @@ pub enum PathCommand {
         #[arg(long)]
         remote_path: Option<String>,
     },
+    Remove {
+        #[arg(long)]
+        id: Option<String>,
+    },
 }
