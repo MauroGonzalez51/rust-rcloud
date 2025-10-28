@@ -14,7 +14,7 @@ fn test_zip_single_file() -> anyhow::Result<()> {
     fs::write(&test_file, b"Hello, World!").context("Failed to write in temp file")?;
 
     let config = ZipHookConfig {
-        exec: rcloud::HookType::Both,
+        exec: rcloud::HookType::Push,
         source: test_file.display().to_string(),
         level: Some(6),
         exclude: None,
@@ -44,7 +44,7 @@ fn test_zip_directory() -> anyhow::Result<()> {
     fs::write(subdir.join("file3.txt"), b"Content 3").context("failed to write content to file")?;
 
     let config = ZipHookConfig {
-        exec: rcloud::HookType::Both,
+        exec: rcloud::HookType::Push,
         source: temp_dir.path().display().to_string(),
         level: Some(6),
         exclude: None,
@@ -69,7 +69,7 @@ fn test_zip_with_exclusions() -> anyhow::Result<()> {
         .context("failed to write content to file")?;
 
     let config = ZipHookConfig {
-        exec: rcloud::HookType::Both,
+        exec: rcloud::HookType::Push,
         source: temp_dir.path().display().to_string(),
         level: Some(6),
         exclude: Some(vec!["*.log".to_string()]),
