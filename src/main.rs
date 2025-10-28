@@ -2,14 +2,14 @@ mod cli;
 mod config;
 mod utils;
 
+use crate::{
+    cli::{commands::remote, parser::Args, parser::Commands},
+    config::prelude::*,
+    utils::logger::LOG,
+};
 use anyhow::{Context, bail};
 use clap::Parser;
-use cli::{commands::remote, parser::Args, parser::Commands};
-use config::prelude::*;
-
 use dotenvy::dotenv;
-
-use crate::utils::logger::LOG;
 
 fn run() -> anyhow::Result<(), anyhow::Error> {
     let args = Args::parse();
