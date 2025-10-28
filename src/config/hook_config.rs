@@ -23,7 +23,7 @@ impl std::fmt::Display for Hooks {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Copy, Selectable)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, Selectable, PartialEq)]
 pub enum HookExecType {
     Push,
     Pull,
