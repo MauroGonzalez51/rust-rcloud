@@ -1,6 +1,6 @@
 use crate::{
     cli::{commands::remote::utils::remote, parser::Args},
-    config::prelude::{Registry, Remote},
+    config::prelude::*,
     log_success,
 };
 use anyhow::Context;

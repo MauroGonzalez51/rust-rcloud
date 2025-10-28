@@ -1,4 +1,4 @@
-use crate::{cli::parser::Args, config::prelude::Registry};
+use crate::{cli::parser::Args, config::prelude::*};
 use console::Style;
 
 pub fn remote_list(_args: &Args, registry: &Registry) {

@@ -3,7 +3,7 @@ mod config;
 mod utils;
 
 use crate::{
-    cli::{commands::remote, parser::Args, parser::Commands},
+    cli::{commands, parser::Args, parser::Commands},
     config::prelude::*,
     utils::logger::LOG,
 };
@@ -31,29 +31,39 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
     match &args.command {
         Commands::Remote { action } => match action {
             cli::commands::remote::command::RemoteCommand::List => {
-                remote::handlers::list::remote_list(&args, &registry)
+                commands::remote::handlers::list::remote_list(&args, &registry)
             }
             cli::commands::remote::command::RemoteCommand::Add { name, provider } => {
-                remote::handlers::add::remote_add(&args, &mut registry, name, provider)?
+                commands::remote::handlers::add::remote_add(&args, &mut registry, name, provider)?
             }
             cli::commands::remote::command::RemoteCommand::Remove { id } => {
-                remote::handlers::remove::remote_remove(&args, &mut registry, id)?
+                commands::remote::handlers::remove::remote_remove(&args, &mut registry, id)?
             }
             cli::commands::remote::command::RemoteCommand::Update { id, name, provider } => {
-                remote::handlers::update::remote_update(&args, &mut registry, id, name, provider)?
+                commands::remote::handlers::update::remote_update(
+                    &args,
+                    &mut registry,
+                    id,
+                    name,
+                    provider,
+                )?
             }
         },
         Commands::Path { action } => match action {
+            cli::commands::path::command::PathCommand::List => {
+                commands::path::handlers::list::path_list(&args, &registry)
+            }
             cli::commands::path::command::PathCommand::Add {
                 remote_id,
                 local_path,
                 remote_path,
-            } => {
-                todo!()
-            }
-            cli::commands::path::command::PathCommand::List => {
-                todo!()
-            }
+            } => commands::path::handlers::add::path_add(
+                &args,
+                &registry,
+                remote_id,
+                local_path,
+                remote_path,
+            )?,
         },
     }
 

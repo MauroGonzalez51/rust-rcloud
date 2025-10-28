@@ -1,7 +1,6 @@
+use crate::config::prelude::*;
 use anyhow::Context;
 use inquire::{Select, Text};
-
-use crate::config::prelude::{Registry, Remote};
 
 pub struct Prompt;
 pub struct Utils;

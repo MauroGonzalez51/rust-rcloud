@@ -632,6 +632,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "inquire-derive"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "807533895ea669bc861ac63c56fb6cff6e4ed049dff1550c39298c9864ffa561"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "is_terminal_polyfill"
 version = "1.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -907,6 +918,7 @@ dependencies = [
  "fs2",
  "globset",
  "inquire",
+ "inquire-derive",
  "lazy_static",
  "paste",
  "predicates",

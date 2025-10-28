@@ -1,5 +1,7 @@
-use super::remote::Remote;
-use crate::{log_info, log_warn};
+use crate::{
+    config::prelude::*,
+    log_info, log_warn,
+};
 use anyhow::{Context, bail};
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
@@ -38,6 +40,9 @@ pub struct Registry {
 
     #[serde(default)]
     pub remotes: Vec<Remote>,
+
+    #[serde(default)]
+    pub paths: Vec<PathConfig>,
 }
 
 impl Registry {
@@ -65,6 +70,7 @@ impl Registry {
             let mut registry = Registry {
                 registry_path: registry_path.clone(),
                 remotes: vec![],
+                paths: vec![],
             };
 
             registry.save().context("failed to save new registry")?;

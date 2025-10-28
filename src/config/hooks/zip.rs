@@ -1,8 +1,4 @@
-use crate::{
-    config::hook_config::{Hook, HookContext, HookType},
-    define_hook, log_info,
-    utils::file::TempFileWriter,
-};
+use crate::{config::prelude::*, define_hook, log_info, utils::file::TempFileWriter};
 use anyhow::{Context, bail};
 use sha2::{Digest, Sha256};
 use std::{fs, io::Write, path::Path};

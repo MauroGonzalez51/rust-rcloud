@@ -1,4 +1,4 @@
-use crate::config::hook_config::HookConfig;
+use crate::config::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

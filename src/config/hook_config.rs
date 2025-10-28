@@ -1,12 +1,19 @@
 use crate::config::hooks::zip::{ZipHook, ZipHookConfig};
+use inquire_derive::Selectable;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, Selectable)]
 pub enum HookType {
     Push,
     Pull,
     Both,
+}
+
+impl std::fmt::Display for HookType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 pub trait Hook: std::fmt::Debug + Send + Sync {

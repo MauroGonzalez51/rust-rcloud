@@ -1,5 +1,5 @@
-use crate::{cli::parser::Args, config::prelude::Registry};
+use crate::{cli::parser::Args, config::prelude::*};
 
-pub fn path_list(_args: &Args, registry: &Registry) {
+pub fn path_list(_args: &Args, _registry: &Registry) {
     todo!()
 }
