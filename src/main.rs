@@ -59,7 +59,7 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                 remote_path,
             } => commands::path::handlers::add::path_add(
                 &args,
-                &registry,
+                &mut registry,
                 remote_id,
                 local_path,
                 remote_path,

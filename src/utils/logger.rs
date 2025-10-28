@@ -8,8 +8,8 @@ pub struct Logger {
     debug: Style,
 }
 
-impl Logger {
-    pub fn new() -> Self {
+impl Default for Logger {
+    fn default() -> Self {
         Self {
             error: Style::new().red().bold(),
             warn: Style::new().yellow().bold(),
@@ -17,6 +17,12 @@ impl Logger {
             success: Style::new().green().bold(),
             debug: Style::new().dim(),
         }
+    }
+}
+
+impl Logger {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn error(&self, msg: impl std::fmt::Display) {

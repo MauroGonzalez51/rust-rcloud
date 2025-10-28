@@ -23,7 +23,7 @@ pub fn remote_remove(
 
             remote::Utils::remote_by_id(registry, value).context("remote not found")?
         }
-        None => remote::Prompt::remote::<fn(inquire::Select<String>) -> inquire::Select<String>>(
+        None => remote::Prompt::remote::<fn(inquire::Select<String>) -> inquire::Select<String>>("Select a remote to remove:",
             registry, None,
         )
         .context("failed to execute prompt")?,

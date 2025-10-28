@@ -26,7 +26,9 @@ pub fn remote_update(
             remote::Utils::remote_by_id(registry, value).context("remote not found")?
         }
         None => remote::Prompt::remote::<fn(inquire::Select<String>) -> inquire::Select<String>>(
-            registry, None,
+            "Select a remote to update:",
+            registry,
+            None,
         )
         .context("failed to execute prompt")?,
     };

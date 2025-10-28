@@ -3,23 +3,41 @@ use inquire_derive::Selectable;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+pub trait Hook: std::fmt::Debug + Send + Sync {
+    fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext>;
+    fn name(&self) -> &'static str;
+    fn exec_type(&self) -> &HookExecType;
+    fn hook_type(&self) -> &Hooks;
+}
+
+#[derive(Debug, Clone, Copy, Selectable)]
+pub enum Hooks {
+    Zip,
+}
+
+impl std::fmt::Display for Hooks {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Hooks::Zip => write!(f, "Zip Compression"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Copy, Selectable)]
-pub enum HookType {
+pub enum HookExecType {
     Push,
     Pull,
     Both,
 }
 
-impl std::fmt::Display for HookType {
+impl std::fmt::Display for HookExecType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        match self {
+            HookExecType::Both => write!(f, "{:?}", "Both"),
+            HookExecType::Push => write!(f, "{:?}", "Push"),
+            HookExecType::Pull => write!(f, "{:?}", "Pull"),
+        }
     }
-}
-
-pub trait Hook: std::fmt::Debug + Send + Sync {
-    fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext>;
-    fn name(&self) -> &'static str;
-    fn exec_type(&self) -> &HookType;
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +78,36 @@ impl From<HookConfig> for Box<dyn Hook> {
     }
 }
 
+impl std::fmt::Display for HookConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HookConfig::Zip(cfg) => {
+                write!(f, "Zip(level: {:?}, source: {})", cfg.level, cfg.source)
+            }
+        }
+    }
+}
+
+impl HookConfig {
+    pub fn source(&self) -> &String {
+        match self {
+            HookConfig::Zip(cfg) => &cfg.source,
+        }
+    }
+
+    pub fn exec_type(&self) -> &HookExecType {
+        match self {
+            HookConfig::Zip(cfg) => &cfg.exec,
+        }
+    }
+
+    pub fn hook_type(&self) -> &Hooks {
+        match self {
+            HookConfig::Zip(_) => &Hooks::Zip,
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! define_hook {
     (
@@ -70,14 +118,14 @@ macro_rules! define_hook {
         paste::paste! {
             #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
             pub struct [<$hook_name Config>] {
-                pub exec: HookType,
+                pub exec: $crate::config::hook_config::HookExecType,
                 $(pub $field: $field_ty),*
             }
         }
 
         #[derive(Debug)]
         pub struct $hook_name {
-            pub exec: HookType,
+            pub exec: $crate::config::hook_config::HookExecType,
             $(pub $field: $field_ty),*
         }
 

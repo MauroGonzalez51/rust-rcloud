@@ -16,7 +16,7 @@ impl Prompt {
             .with_validator(inquire::validator::MinLengthValidator::new(1))
     }
 
-    pub fn remote<F>(registry: &Registry, f: Option<F>) -> anyhow::Result<Remote>
+    pub fn remote<F>(prompt: &str, registry: &Registry, f: Option<F>) -> anyhow::Result<Remote>
     where
         F: FnOnce(Select<'_, String>) -> Select<'_, String>,
     {
@@ -33,7 +33,7 @@ impl Prompt {
 
         let display_options = options.iter().map(|(display, _)| display.clone()).collect();
 
-        let mut select = Select::new("Select remote to remove", display_options)
+        let mut select = Select::new(prompt, display_options)
             .with_vim_mode(true)
             .with_page_size(10)
             .with_help_message("<remote_name> (<remote_provider>) [<...remote_id>]");

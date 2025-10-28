@@ -110,8 +110,12 @@ impl Hook for ZipHook {
         "zip"
     }
 
-    fn exec_type(&self) -> &HookType {
+    fn exec_type(&self) -> &HookExecType {
         &self.exec
+    }
+
+    fn hook_type(&self) -> &Hooks {
+        &Hooks::Zip
     }
 
     fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext> {
@@ -120,7 +124,7 @@ impl Hook for ZipHook {
         }
 
         match self.exec {
-            HookType::Push | HookType::Both => {
+            HookExecType::Push | HookExecType::Both => {
                 let path = &ctx.path;
 
                 log_info!("processing file: {:?}", path);
@@ -162,7 +166,7 @@ impl Hook for ZipHook {
                 Ok(HookContext::new(file_path).with_metadata("zip_checksum", final_checksum))
             }
 
-            HookType::Pull => {
+            HookExecType::Pull => {
                 let file = std::fs::File::open(&ctx.path).context("failed to open zip file")?;
                 let mut archive =
                     zip::read::ZipArchive::new(file).context("failed to read zip archive")?;

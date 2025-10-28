@@ -9,16 +9,13 @@ impl Prompt {
     where
         F: FnOnce(Select<'_, String>) -> Select<'_, String>,
     {
-        let remote = remote::Prompt::remote(registry, f).context("failed to select remote")?;
+        let remote = remote::Prompt::remote("Select a remote:", registry, f)
+            .context("failed to select remote")?;
 
         Ok(remote.id.clone())
     }
 
     pub fn path(message: &'static str) -> Text<'static, 'static> {
         Text::new(message).with_validator(inquire::validator::MinLengthValidator::new(1))
-    }
-
-    pub fn hook_type() -> Select<'static, HookType> {
-        HookType::select("select when the Hook will run:")
     }
 }

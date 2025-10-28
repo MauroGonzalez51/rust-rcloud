@@ -8,6 +8,14 @@ pub struct PathConfig {
     pub local_path: String,
     pub remote_path: String,
 
+    pub hooks: PathConfigHooks,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PathConfigHooks {
     #[serde(default)]
-    pub hooks: Vec<HookConfig>,
+    pub push: Vec<HookConfig>,
+
+    #[serde(default)]
+    pub pull: Vec<HookConfig>,
 }
