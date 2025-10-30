@@ -1,5 +1,6 @@
 use crate::{config::prelude::*, define_hook, log_info, utils::file::TempFileWriter};
 use anyhow::{Context, bail};
+use inquire::Text;
 use sha2::{Digest, Sha256};
 use std::{fs, io::Write, path::Path};
 
@@ -124,7 +125,7 @@ impl Hook for ZipHook {
         }
 
         match self.exec {
-            HookExecType::Push | HookExecType::Both => {
+            HookExecType::Push => {
                 let path = &ctx.path;
 
                 log_info!("processing file: {:?}", path);
@@ -194,6 +195,48 @@ impl Hook for ZipHook {
 
                 Ok(HookContext::new(temp_dir))
             }
+        }
+    }
+}
+
+impl ZipHookConfig {
+    pub fn build(exec_type: HookExecType, source: &str) -> anyhow::Result<HookConfig> {
+        log_info!("configuring {} for {}", Hooks::Zip, exec_type);
+
+        match exec_type {
+            HookExecType::Push => {
+                let level = Text::new("Compression level (0-9):")
+                    .with_default("6")
+                    .prompt()
+                    .context("failed to get compression level")?
+                    .parse::<i64>()
+                    .context("failed to parse compresion level")?;
+
+                let exclude = Text::new("Exclude patterns: ")
+                    .with_help_message("comma-separated, glob only, optional")
+                    .prompt_skippable()
+                    .context("failed to get exclude patterns")?;
+
+                let exclude = exclude.map(|s| {
+                    s.split(',')
+                        .map(|p| p.trim().to_string())
+                        .filter(|p| !p.is_empty())
+                        .collect()
+                });
+
+                Ok(HookConfig::Zip(Self {
+                    exec: HookExecType::Push,
+                    source: source.to_string(),
+                    level: Some(level),
+                    exclude,
+                }))
+            }
+            HookExecType::Pull => Ok(HookConfig::Zip(Self {
+                exec: HookExecType::Pull,
+                source: source.to_string(),
+                level: None,
+                exclude: None,
+            })),
         }
     }
 }

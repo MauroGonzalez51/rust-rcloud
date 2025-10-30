@@ -54,54 +54,35 @@ pub fn path_add(
                 .prompt()
                 .context("failed to select hook")?;
 
-            let hook_exec_type = HookExecType::select("Select when the Hook will run:")
+            let hook_exec_type = HookExecType::multi_select("Select when the Hook will run:")
                 .prompt()
                 .context("failed to select hook exec type")?;
 
-            match hook_exec_type {
-                HookExecType::Push => {
-                    let hook = HookBuilder::new()
-                        .with_hook_type(hook_type)
-                        .with_exec_type(HookExecType::Push)
-                        .with_paths(local_path.clone(), remote_path.clone())
-                        .with_list(&push_hooks)
-                        .build()
-                        .context("failed to build hook")?;
-
-                    push_hooks.push(hook);
-                }
-                HookExecType::Pull => {
-                    let hook = HookBuilder::new()
-                        .with_hook_type(hook_type)
-                        .with_exec_type(HookExecType::Pull)
-                        .with_paths(local_path.clone(), remote_path.clone())
-                        .with_list(&pull_hooks)
-                        .build()
-                        .context("failed to build hook")?;
-
-                    pull_hooks.insert(0, hook);
-                }
-                HookExecType::Both => {
-                    push_hooks.push(
-                        HookBuilder::new()
-                            .with_hook_type(hook_type)
-                            .with_exec_type(HookExecType::Push)
-                            .with_paths(local_path.clone(), remote_path.clone())
-                            .with_list(&push_hooks)
-                            .build()
-                            .context("failed to build hook")?,
-                    );
-
-                    pull_hooks.insert(
-                        0,
-                        HookBuilder::new()
-                            .with_hook_type(hook_type)
-                            .with_exec_type(HookExecType::Pull)
-                            .with_paths(local_path.clone(), remote_path.clone())
-                            .with_list(&pull_hooks)
-                            .build()
-                            .context("failed to build hook")?,
-                    );
+            for exec_type in hook_exec_type {
+                match exec_type {
+                    HookExecType::Push => {
+                        push_hooks.push(
+                            HookBuilder::new()
+                                .with_hook_type(hook_type)
+                                .with_exec_type(exec_type)
+                                .with_paths(local_path.clone(), remote_path.clone())
+                                .with_list(&push_hooks)
+                                .build()
+                                .context("failed to build push hook")?,
+                        );
+                    }
+                    HookExecType::Pull => {
+                        pull_hooks.insert(
+                            0,
+                            HookBuilder::new()
+                                .with_hook_type(hook_type)
+                                .with_exec_type(exec_type)
+                                .with_paths(local_path.clone(), remote_path.clone())
+                                .with_list(&pull_hooks)
+                                .build()
+                                .context("failed to build pull hook")?,
+                        );
+                    }
                 }
             }
 

@@ -27,13 +27,11 @@ impl std::fmt::Display for Hooks {
 pub enum HookExecType {
     Push,
     Pull,
-    Both,
 }
 
 impl std::fmt::Display for HookExecType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            HookExecType::Both => write!(f, "{:?}", "Both"),
             HookExecType::Push => write!(f, "{:?}", "Push"),
             HookExecType::Pull => write!(f, "{:?}", "Pull"),
         }

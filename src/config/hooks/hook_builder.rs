@@ -1,9 +1,5 @@
-use crate::{
-    config::{hooks::zip::ZipHookConfig, prelude::*},
-    log_info,
-};
-use anyhow::{Context, bail};
-use inquire::Text;
+use crate::config::{hooks::zip::ZipHookConfig, prelude::*};
+use anyhow::Context;
 
 pub struct NeedsHookType;
 pub struct NeedsExecType;
@@ -90,63 +86,6 @@ impl HookBuilder<NeedsList> {
 }
 
 impl HookBuilder<Ready> {
-    fn build_push(
-        self,
-        hook_type: &Hooks,
-        list: &[HookConfig],
-        local_path: &str,
-    ) -> anyhow::Result<HookConfig> {
-        log_info!("configuring {} for {}", hook_type, HookExecType::Push);
-
-        match hook_type {
-            Hooks::Zip => {
-                let level = Text::new("Compression level (0-9):")
-                    .with_default("6")
-                    .prompt()
-                    .context("failed to get compression level")?
-                    .parse::<i64>()
-                    .context("failed to parse compresion level")?;
-
-                let exclude = Text::new("Exclude patterns: ")
-                    .with_help_message("comma-separated, glob only, optional")
-                    .prompt_skippable()
-                    .context("failed to get exclude patterns")?;
-
-                let exclude = exclude.map(|s| {
-                    s.split(',')
-                        .map(|p| p.trim().to_string())
-                        .filter(|p| !p.is_empty())
-                        .collect()
-                });
-
-                Ok(HookConfig::Zip(ZipHookConfig {
-                    exec: HookExecType::Push,
-                    source: self.get_next_source_push(list, local_path),
-                    level: Some(level),
-                    exclude,
-                }))
-            }
-        }
-    }
-
-    fn build_pull(
-        self,
-        hook_type: &Hooks,
-        list: &[HookConfig],
-        remote_path: &str,
-    ) -> anyhow::Result<HookConfig> {
-        log_info!("configuring {} for {}", hook_type, HookExecType::Pull);
-
-        match hook_type {
-            Hooks::Zip => Ok(HookConfig::Zip(ZipHookConfig {
-                exec: HookExecType::Pull,
-                source: self.get_next_source_pull(list, remote_path),
-                level: None,
-                exclude: None,
-            })),
-        }
-    }
-
     pub fn build(self) -> anyhow::Result<HookConfig> {
         let hook_type = self.hook_type.context("missing hook_type")?;
         let hook_exec_type = self.hook_exec_type.context("missing hook_exec_type")?;
@@ -154,19 +93,22 @@ impl HookBuilder<Ready> {
         let local_path = self.local_path.clone().context("missing local_path")?;
         let list = self.list.clone().context("missing list")?;
 
-        if hook_exec_type == HookExecType::Push {
-            return self
-                .build_push(&hook_type, &list, &local_path)
-                .context("failed to build push hook");
-        }
+        let hook_config = match hook_type {
+            Hooks::Zip => match hook_exec_type {
+                HookExecType::Push => ZipHookConfig::build(
+                    hook_exec_type,
+                    &self.get_next_source_push(&list, &local_path),
+                )
+                .context("failed to build hook")?,
+                HookExecType::Pull => ZipHookConfig::build(
+                    hook_exec_type,
+                    &self.get_next_source_pull(&list, &remote_path),
+                )
+                .context("failed to build hook")?,
+            },
+        };
 
-        if hook_exec_type == HookExecType::Pull {
-            return self
-                .build_pull(&hook_type, &list, &remote_path)
-                .context("failed to build pull hook");
-        }
-
-        bail!("HookExecType::Both is not supported");
+        Ok(hook_config)
     }
 
     fn compute_hook_output(self, source: &str, hook_type: Hooks) -> String {
