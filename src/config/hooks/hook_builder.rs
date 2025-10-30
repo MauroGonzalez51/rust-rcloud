@@ -154,13 +154,13 @@ impl HookBuilder<Ready> {
         let local_path = self.local_path.clone().context("missing local_path")?;
         let list = self.list.clone().context("missing list")?;
 
-        if hook_exec_type == HookExecType::Pull {
+        if hook_exec_type == HookExecType::Push {
             return self
                 .build_push(&hook_type, &list, &local_path)
                 .context("failed to build push hook");
         }
 
-        if hook_exec_type == HookExecType::Push {
+        if hook_exec_type == HookExecType::Pull {
             return self
                 .build_pull(&hook_type, &list, &remote_path)
                 .context("failed to build pull hook");

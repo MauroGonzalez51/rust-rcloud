@@ -44,6 +44,7 @@ pub fn path_add(
     let mut pull_hooks = Vec::<HookConfig>::new();
 
     let add_hooks = Confirm::new("would you like to add some hooks?")
+        .with_default(false)
         .prompt()
         .context("failed to create confirm prompt")?;
 
@@ -72,7 +73,7 @@ pub fn path_add(
                 HookExecType::Pull => {
                     let hook = HookBuilder::new()
                         .with_hook_type(hook_type)
-                        .with_exec_type(HookExecType::Push)
+                        .with_exec_type(HookExecType::Pull)
                         .with_paths(local_path.clone(), remote_path.clone())
                         .with_list(&pull_hooks)
                         .build()
