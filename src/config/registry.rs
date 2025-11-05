@@ -106,7 +106,7 @@ impl Registry {
             Err(_err) => {
                 *self = backup;
             }
-        };
+        }
 
         Ok(())
     }

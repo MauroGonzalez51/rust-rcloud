@@ -12,7 +12,7 @@ pub fn remote_add(
     name: &Option<String>,
     provider: &Option<String>,
 ) -> anyhow::Result<()> {
-    let name = match name {
+    let remote_name = match name {
         Some(value) => value,
         None => &remote::Prompt::name()
             .with_help_message(
@@ -32,15 +32,15 @@ pub fn remote_add(
     };
 
     if args.verbose > 0 {
-        println!("[ INFO ] adding remote '{name}' ({provider}) to registry")
+        println!("[ INFO ] adding remote '{remote_name}' ({provider}) to registry")
     }
 
     registry
         .tx(|rgx| {
             rgx.remotes.push(Remote {
                 id: Uuid::new_v4().to_string(),
-                remote_name: name.to_string(),
-                provider: provider.to_string(),
+                remote_name: remote_name.clone(),
+                provider: provider.clone(),
             })
         })
         .context("error inside transaction")?;

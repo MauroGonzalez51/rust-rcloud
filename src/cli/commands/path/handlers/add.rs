@@ -119,7 +119,7 @@ pub fn path_add(
                 rgx.paths.push(path_config);
             })
             .context("failed to execute transaction")?;
-    };
+    }
 
     Ok(())
 }
