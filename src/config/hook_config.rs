@@ -1,4 +1,5 @@
 use crate::config::hooks::zip::{ZipHook, ZipHookConfig};
+use clap::ValueEnum;
 use inquire_derive::Selectable;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -23,7 +24,7 @@ impl std::fmt::Display for Hooks {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Copy, Selectable, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, Selectable, PartialEq, ValueEnum)]
 pub enum HookExecType {
     Push,
     Pull,

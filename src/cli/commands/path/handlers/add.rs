@@ -33,6 +33,11 @@ pub fn path_add(
             .context("failed to get local path")?,
     };
 
+    let local_path = std::fs::canonicalize(shellexpand::tilde(&local_path).to_string())
+        .with_context(|| format!("failed to resolve local path: {}", local_path))?
+        .to_string_lossy()
+        .to_string();
+
     let remote_path = match remote_path {
         Some(value) => value,
         None => &path::Prompt::path("remote path")

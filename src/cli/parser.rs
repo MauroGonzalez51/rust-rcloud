@@ -1,4 +1,6 @@
-use crate::cli::commands::{path::command::PathCommand, remote::command::RemoteCommand};
+use crate::cli::commands::{
+    path::command::PathCommand, remote::command::RemoteCommand, sync::command::SyncCommand,
+};
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
@@ -58,5 +60,10 @@ pub enum Commands {
     Path {
         #[command(subcommand)]
         action: PathCommand,
+    },
+    #[command(about = "Sync Operations")]
+    Sync {
+        #[command(subcommand)]
+        action: SyncCommand,
     },
 }

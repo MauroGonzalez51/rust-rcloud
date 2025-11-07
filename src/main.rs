@@ -68,6 +68,14 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                 commands::path::handlers::remove::path_remove(&args, &mut registry, id)?
             }
         },
+        Commands::Sync { action } => match action {
+            cli::commands::sync::command::SyncCommand::All => todo!(),
+            cli::commands::sync::command::SyncCommand::Path { direction, path_id } => {
+                commands::sync::handlers::path_sync::path_sync(
+                    &args, &registry, direction, path_id,
+                )?
+            }
+        },
     }
 
     Ok(())
