@@ -1,7 +1,6 @@
-use crate::{config::prelude::*, define_hook, log_info, utils::file::TempFileWriter};
+use crate::{config::prelude::*, define_hook, log_info, utils::file::TempFileWriter, utils::hash};
 use anyhow::{Context, bail};
 use inquire::Text;
-use sha2::{Digest, Sha256};
 use std::{fs, io::Write, path::Path};
 
 define_hook!(ZipHook {
@@ -35,9 +34,7 @@ impl ZipHook {
         zip: &mut zip::ZipWriter<std::io::Cursor<&mut Vec<u8>>>,
         options: zip::write::FileOptions<'_, ()>,
         exclude_set: Option<&globset::GlobSet>,
-    ) -> anyhow::Result<Vec<u8>> {
-        let mut checksums = Vec::<u8>::new();
-
+    ) -> anyhow::Result<()> {
         for entry in walkdir::WalkDir::new(path)
             .into_iter()
             .filter_map(Result::ok)
@@ -58,10 +55,6 @@ impl ZipHook {
             let file_content = fs::read(entry.path())
                 .with_context(|| format!("failed to read file: {:?}", entry.path()))?;
 
-            let mut hasher = Sha256::new();
-            hasher.update(&file_content);
-            checksums.extend_from_slice(&hasher.finalize());
-
             zip.start_file(relative_path.to_string_lossy(), options)
                 .with_context(|| format!("failed to add file to zip: {:?}", relative_path))?;
 
@@ -71,7 +64,7 @@ impl ZipHook {
             log_info!("added: {:?} ({} bytes)", relative_path, file_content.len());
         }
 
-        Ok(checksums)
+        Ok(())
     }
 
     fn process_file(
@@ -79,14 +72,9 @@ impl ZipHook {
         path: &Path,
         zip: &mut zip::ZipWriter<std::io::Cursor<&mut Vec<u8>>>,
         options: zip::write::FileOptions<'_, ()>,
-    ) -> anyhow::Result<Vec<u8>> {
+    ) -> anyhow::Result<()> {
         let file_content =
             fs::read(path).with_context(|| format!("failed to read file: {:?}", path))?;
-
-        let mut hasher = Sha256::new();
-        hasher.update(&file_content);
-
-        let checksum = hasher.finalize();
 
         let file_name = Path::new(&self.source)
             .file_name()
@@ -102,7 +90,7 @@ impl ZipHook {
 
         log_info!("added: {:?} ({} bytes)", file_name, file_content.len());
 
-        Ok(checksum.to_vec())
+        Ok(())
     }
 }
 
@@ -144,7 +132,7 @@ impl Hook for ZipHook {
                     .build_exclude_set()
                     .context("failed to build exclude set")?;
 
-                let checksums = match path.is_dir() {
+                match path.is_dir() {
                     true => self
                         .process_directory(path, &mut zip, options, exclude_set.as_ref())
                         .context("failed to process directory")?,
@@ -156,15 +144,13 @@ impl Hook for ZipHook {
                 let cursor = zip.finish().context("failed to finish zip")?;
                 let zip_bytes = cursor.into_inner();
 
-                let mut final_hasher = Sha256::new();
-                final_hasher.update(&checksums);
-                let final_checksum = format!("{:x}", final_hasher.finalize());
+                let checksum = hash::Hash::hash_bytes(zip_bytes);
 
                 let file_path = zip_bytes
                     .write_temp()
                     .context("failed to write temp file")?;
 
-                Ok(HookContext::new(file_path).with_metadata("zip_checksum", final_checksum))
+                Ok(HookContext::new(file_path).with_metadata("zip_checksum", checksum))
             }
 
             HookExecType::Pull => {

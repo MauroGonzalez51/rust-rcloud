@@ -10,6 +10,9 @@ pub struct PathConfig {
     pub remote_path: String,
 
     #[serde(default)]
+    pub hash: Option<String>,
+
+    #[serde(default)]
     pub tags: Vec<String>,
 
     pub hooks: PathConfigHooks,

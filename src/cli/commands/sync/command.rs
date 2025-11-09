@@ -8,6 +8,9 @@ pub enum SyncCommand {
     All {
         #[arg(long, value_name = "...TAGS", help = "comma separated tags to sync")]
         tags: Vec<String>,
+
+        #[arg(short = 'F', long, help = "Force sending to remote (ALL)")]
+        force_all: bool,
     },
     #[command(about = "Sync a specific path by ID")]
     Path {
@@ -16,5 +19,8 @@ pub enum SyncCommand {
 
         #[arg(long, value_enum, help = "Sync direction")]
         direction: Option<HookExecType>,
+
+        #[arg(short = 'F', long, help = "Force sending to remote")]
+        force: bool,
     },
 }

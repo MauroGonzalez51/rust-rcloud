@@ -126,6 +126,7 @@ pub fn path_add(
         remote_id: remote_id.clone(),
         local_path: local_path.clone(),
         remote_path: remote_path.clone(),
+        hash: None,
         hooks: PathConfigHooks {
             push: push_hooks,
             pull: pull_hooks,

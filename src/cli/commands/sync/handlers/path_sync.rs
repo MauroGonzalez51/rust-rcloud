@@ -1,7 +1,8 @@
 use crate::{
     cli::{commands::path::utils::path, parser::Args},
     config::prelude::{Hook, HookConfig, HookContext, HookExecType, Registry},
-    log_debug, log_info, log_success,
+    log_debug, log_info, log_success, log_warn,
+    utils::hash,
 };
 use anyhow::Context;
 use std::path::PathBuf;
@@ -20,10 +21,15 @@ fn compute_remote_filename(hooks: &[HookConfig], base_name: &str) -> String {
 
 pub fn path_sync(
     args: &Args,
-    registry: &Registry,
+    registry: &mut Registry,
     direction: &Option<HookExecType>,
     path_id: &Option<String>,
+    force: &bool,
 ) -> anyhow::Result<()> {
+    if *force {
+        log_warn!("using --force");
+    }
+
     let direction = match direction {
         Some(value) => value,
         None => &HookExecType::select("Select direction:")
@@ -43,19 +49,36 @@ pub fn path_sync(
         .paths
         .iter()
         .find(|p| p.id == path_id)
-        .ok_or_else(|| anyhow::anyhow!("path does not exists"))?;
+        .ok_or_else(|| anyhow::anyhow!("path does not exists"))?
+        .clone();
 
     let remote_config = registry
         .remotes
         .iter()
         .find(|r| r.id == path_config.remote_id)
-        .ok_or_else(|| anyhow::anyhow!("remote does not exists"))?;
+        .ok_or_else(|| anyhow::anyhow!("remote does not exists"))?
+        .clone();
 
     let hooks = &path_config.hooks;
 
     match direction {
         HookExecType::Push => {
             log_info!("running pre-transaction hooks");
+
+            let processed_hash =
+                hash::Hash::hash_path(&std::path::PathBuf::from(&path_config.local_path))
+                    .context("failed to calculate content hash")?;
+
+            log_debug!("calculated hash: {}", processed_hash);
+
+            if !force {
+                if let Some(stored_hash) = &path_config.hash {
+                    if stored_hash == &processed_hash {
+                        log_warn!("content unchanged (hash match). skipping");
+                        return Ok(());
+                    }
+                }
+            }
 
             let mut context = HookContext::new(PathBuf::from(&path_config.local_path));
 
@@ -127,6 +150,14 @@ pub fn path_sync(
                 anyhow::bail!("rclone push sync failed");
             }
 
+            registry
+                .tx(|rgx| {
+                    if let Some(path) = rgx.paths.iter_mut().find(|p| p.id == path_config.id) {
+                        path.hash = Some(processed_hash);
+                    }
+                })
+                .context("failed to execute transaction")?;
+
             log_success!(
                 "sent to remote {} -> {}:{}",
                 path_config.local_path,
@@ -197,6 +228,20 @@ pub fn path_sync(
                 context = hook.process(context)?;
             }
 
+            let processed_hash = hash::Hash::hash_path(&context.path)
+                .context("failed to calculate processed content hash")?;
+
+            log_debug!("processed hash: {}", processed_hash);
+
+            if !force {
+                if let Some(stored_hash) = &path_config.hash {
+                    if stored_hash == &processed_hash {
+                        log_warn!("content unchanged (hash match). skipping");
+                        return Ok(());
+                    }
+                }
+            }
+
             log_info!("moving processed content to local_path");
 
             log_debug!(
@@ -238,6 +283,14 @@ pub fn path_sync(
                 std::fs::remove_dir_all(&context.path)
                     .context("failed to remove temp directory")?;
             }
+
+            registry
+                .tx(|rgx| {
+                    if let Some(path) = rgx.paths.iter_mut().find(|p| p.id == path_config.id) {
+                        path.hash = Some(processed_hash);
+                    }
+                })
+                .context("failed to execute transaction")?;
 
             log_success!(
                 "pulled from remote {}:{} -> {}",
