@@ -109,6 +109,18 @@ pub fn path_add(
         }
     }
 
+    let add_tags = Confirm::new("Add some tags?")
+        .with_default(false)
+        .prompt()
+        .context("failed to get confirmation")?;
+
+    let mut tags: Vec<String> = vec![];
+
+    if add_tags {
+        tags = TagOption::multiple_select("Select tags:", registry)
+            .context("failed to select tags")?;
+    }
+
     let path_config = PathConfig {
         id: uuid::Uuid::new_v4().to_string(),
         remote_id: remote_id.clone(),
@@ -118,6 +130,7 @@ pub fn path_add(
             push: push_hooks,
             pull: pull_hooks,
         },
+        tags,
     };
 
     log_debug!("using path_config: {:?}", path_config);

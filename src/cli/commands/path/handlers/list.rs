@@ -13,10 +13,16 @@ pub fn path_list(_args: &Args, registry: &Registry) {
     let arrow_style = Style::new().bold().yellow();
     let remote_style = Style::new().blue();
     let hooks_style = Style::new().bold().magenta();
+    let tags_style = Style::new().dim().italic();
 
     for (i, path) in registry.paths.iter().enumerate() {
+        let tags_display = match path.tags.is_empty() {
+            true => String::new(),
+            false => format!(" [tags: {}]", path.tags.join(", ")),
+        };
+
         println!(
-            "{} {} {} {} {} {}",
+            "{} {} {} {} {}{}",
             idx_style.apply_to(format!("> {}.", i + 1)),
             local_style.apply_to(&path.local_path),
             arrow_style.apply_to("->"),
@@ -25,7 +31,7 @@ pub fn path_list(_args: &Args, registry: &Registry) {
                 "[{} Hook(s)]",
                 path.hooks.pull.len() + path.hooks.push.len()
             )),
-            Style::new().dim().apply_to(""),
+            tags_style.apply_to(tags_display),
         );
     }
 }

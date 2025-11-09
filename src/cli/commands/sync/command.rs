@@ -12,7 +12,7 @@ pub enum SyncCommand {
         #[arg(value_name = "PATH_ID", help = "ID of the path to sync")]
         path_id: Option<String>,
 
-        #[arg(short = 'D', long, value_enum, help = "Sync direction")]
+        #[arg(long, value_enum, help = "Sync direction")]
         direction: Option<HookExecType>,
     },
 }
