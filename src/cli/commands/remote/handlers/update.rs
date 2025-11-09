@@ -1,7 +1,5 @@
 use crate::{
-    cli::{commands::remote::utils::remote, parser::Args},
-    config::prelude::*,
-    log_info, log_success, log_warn,
+    cli::{commands::remote::utils::remote, parser::Args}, config::prelude::*, log_debug, log_info, log_success, log_warn
 };
 use anyhow::Context;
 
@@ -32,6 +30,8 @@ pub fn remote_update(
         )
         .context("failed to execute prompt")?,
     };
+
+    log_debug!("using remote_info: {:?}", remote_info);
 
     let name = match name {
         Some(value) => value,

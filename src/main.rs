@@ -14,6 +14,10 @@ use dotenvy::dotenv;
 fn run() -> anyhow::Result<(), anyhow::Error> {
     let args = Args::parse();
 
+    if args.debug {
+        LOG.set_level(utils::logger::LogLevel::Debug);
+    }
+
     let registry_path = args
         .registry
         .clone()

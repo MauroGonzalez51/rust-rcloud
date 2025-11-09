@@ -1,13 +1,13 @@
 use crate::{
     cli::{commands::remote::utils::remote, parser::Args},
     config::prelude::*,
-    log_success,
+    log_debug, log_success,
 };
 use anyhow::Context;
 use uuid::Uuid;
 
 pub fn remote_add(
-    args: &Args,
+    _args: &Args,
     registry: &mut Registry,
     name: &Option<String>,
     provider: &Option<String>,
@@ -31,9 +31,7 @@ pub fn remote_add(
             .clone(),
     };
 
-    if args.verbose > 0 {
-        println!("[ INFO ] adding remote '{remote_name}' ({provider}) to registry")
-    }
+    log_debug!("[ INFO ] adding remote '{remote_name}' ({provider}) to registry");
 
     registry
         .tx(|rgx| {

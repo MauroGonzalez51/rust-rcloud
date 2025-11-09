@@ -19,7 +19,7 @@ fn compute_remote_filename(hooks: &[HookConfig], base_name: &str) -> String {
 }
 
 pub fn path_sync(
-    args: &Args,
+    _args: &Args,
     registry: &Registry,
     direction: &Option<HookExecType>,
     path_id: &Option<String>,
@@ -72,9 +72,7 @@ pub fn path_sync(
                     .unwrap_or("archive"),
             );
 
-            if args.debug {
-                log_debug!("final_name: {:?}", final_name);
-            }
+            log_debug!("final_name: {:?}", final_name);
 
             let final_path = match hooks.push.is_empty() {
                 true => context.path.clone(),
@@ -107,9 +105,7 @@ pub fn path_sync(
                 }
             };
 
-            if args.debug {
-                log_debug!("final_path: {:?}", final_path);
-            }
+            log_debug!("final_path: {:?}", final_path);
 
             let status = std::process::Command::new("rclone")
                 .args([
@@ -150,9 +146,7 @@ pub fn path_sync(
                     .unwrap_or("archive"),
             );
 
-            if args.debug {
-                log_debug!("remote_filename: {:?}", remote_filename);
-            }
+            log_debug!("remote_filename: {:?}", remote_filename);
 
             let remote_file_path = match hooks.pull.is_empty() {
                 true => format!("{}:{}", remote_config.remote_name, path_config.remote_path),
@@ -162,9 +156,7 @@ pub fn path_sync(
                 ),
             };
 
-            if args.debug {
-                log_debug!("remote_file_path: {:?}", remote_file_path)
-            }
+            log_debug!("remote_file_path: {:?}", remote_file_path);
 
             let status = std::process::Command::new("rclone")
                 .args([
@@ -207,13 +199,11 @@ pub fn path_sync(
 
             log_info!("moving processed content to local_path");
 
-            if args.debug {
-                log_debug!(
-                    "context path: {:?} (exists: {})",
-                    context.path,
-                    context.path.exists()
-                );
-            }
+            log_debug!(
+                "context path: {:?} (exists: {})",
+                context.path,
+                context.path.exists()
+            );
 
             if let Some(parent) = std::path::Path::new(&path_config.local_path).parent() {
                 std::fs::create_dir_all(parent).context("failed to create parent directory")?;

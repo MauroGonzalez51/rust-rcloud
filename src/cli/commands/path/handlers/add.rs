@@ -1,7 +1,7 @@
 use crate::{
     cli::{commands::path::utils::path, parser::Args},
     config::prelude::*,
-    log_warn,
+    log_debug, log_warn,
 };
 use anyhow::Context;
 use inquire::Confirm;
@@ -44,6 +44,13 @@ pub fn path_add(
             .prompt()
             .context("failed to get remote path")?,
     };
+
+    log_debug!(
+        "{} -> (remote_id: {}):{}",
+        local_path,
+        remote_id,
+        remote_path
+    );
 
     let mut push_hooks = Vec::<HookConfig>::new();
     let mut pull_hooks = Vec::<HookConfig>::new();
@@ -112,6 +119,8 @@ pub fn path_add(
             pull: pull_hooks,
         },
     };
+
+    log_debug!("using path_config: {:?}", path_config);
 
     let confirm_save = Confirm::new("Save this configuration?")
         .with_default(true)
