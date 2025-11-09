@@ -45,6 +45,17 @@ pub struct Args {
     )]
     pub debug: bool,
 
+    #[arg(
+        long = "rclone",
+        value_name = "RCLONE_PATH",
+        help = "Path to rclone executable",
+        help_heading = "GLOBAL OPTIONS",
+        global = true,
+        env = "RCLONE_PATH",
+        default_value = "rclone"
+    )]
+    pub rclone: String,
+
     #[command(subcommand)]
     pub command: Commands,
 }

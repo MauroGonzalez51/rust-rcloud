@@ -19,7 +19,7 @@ fn compute_remote_filename(hooks: &[HookConfig], base_name: &str) -> String {
 }
 
 pub fn path_sync(
-    _args: &Args,
+    args: &Args,
     registry: &Registry,
     direction: &Option<HookExecType>,
     path_id: &Option<String>,
@@ -107,7 +107,7 @@ pub fn path_sync(
 
             log_debug!("final_path: {:?}", final_path);
 
-            let status = std::process::Command::new("rclone")
+            let status = std::process::Command::new(args.rclone.clone())
                 .args([
                     "copy",
                     final_path
@@ -158,7 +158,7 @@ pub fn path_sync(
 
             log_debug!("remote_file_path: {:?}", remote_file_path);
 
-            let status = std::process::Command::new("rclone")
+            let status = std::process::Command::new(args.rclone.clone())
                 .args([
                     "copy",
                     &remote_file_path,
