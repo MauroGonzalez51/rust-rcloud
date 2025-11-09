@@ -1,5 +1,6 @@
 use crate::cli::commands::{
-    path::command::PathCommand, remote::command::RemoteCommand, sync::command::SyncCommand,
+    path::command::PathCommand, registry::command::RegistryCommand, remote::command::RemoteCommand,
+    sync::command::SyncCommand,
 };
 use std::path::PathBuf;
 
@@ -62,6 +63,11 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    #[command(about = "Registry related commands")]
+    Registry {
+        #[command(subcommand)]
+        action: RegistryCommand,
+    },
     #[command(about = "Manage Remotes")]
     Remote {
         #[command(subcommand)]

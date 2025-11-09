@@ -33,6 +33,11 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
     let mut registry = Registry::load(&registry_path).context("failed to load registry")?;
 
     match &args.command {
+        Commands::Registry { action } => match action {
+            cli::commands::registry::command::RegistryCommand::Edit => {
+                commands::registry::handlers::edit::registry_edit(&args)?
+            }
+        },
         Commands::Remote { action } => match action {
             cli::commands::remote::command::RemoteCommand::List => {
                 commands::remote::handlers::list::remote_list(&args, &registry)
