@@ -172,11 +172,11 @@ impl Hook for ZipHook {
                 let mut archive =
                     zip::read::ZipArchive::new(file).context("failed to read zip archive")?;
 
-                let temp_dir = std::env::temp_dir();
+                let temp_dir = tempfile::tempdir().context("failed to create temp directory")?;
 
                 for i in 0..archive.len() {
                     let mut file = archive.by_index(i).context("failed to get file in zip")?;
-                    let output_path = temp_dir.join(file.name());
+                    let output_path = temp_dir.path().join(file.name());
 
                     if file.is_dir() {
                         std::fs::create_dir_all(&output_path).context("faile to create dirs")?;
@@ -189,11 +189,12 @@ impl Hook for ZipHook {
 
                     let mut output_file = std::fs::File::create(&output_path)
                         .context("failed to create output_file")?;
+
                     std::io::copy(&mut file, &mut output_file)
                         .context("failed to copy contents")?;
                 }
 
-                Ok(HookContext::new(temp_dir))
+                Ok(HookContext::new(temp_dir.keep()))
             }
         }
     }

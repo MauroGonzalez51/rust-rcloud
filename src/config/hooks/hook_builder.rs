@@ -111,25 +111,44 @@ impl HookBuilder<Ready> {
         Ok(hook_config)
     }
 
-    fn compute_hook_output(self, source: &str, hook_type: Hooks) -> String {
-        match hook_type {
-            Hooks::Zip => format!("{}.zip", source),
+    fn compute_hook_output(&self, hook_config: &HookConfig) -> String {
+        match hook_config {
+            HookConfig::Zip(cfg) => {
+                let base_name = std::path::Path::new(&cfg.source)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("output");
+
+                format!("{}.zip", base_name)
+            }
         }
     }
 
-    fn get_next_source_push(self, hooks: &[HookConfig], local_path: &str) -> String {
+    fn get_next_source_push(&self, hooks: &[HookConfig], local_path: &str) -> String {
         if hooks.is_empty() {
             return local_path.to_string();
         }
+
         let last_hook = &hooks[hooks.len() - 1];
-        self.compute_hook_output(last_hook.source(), *last_hook.hook_type())
+        self.compute_hook_output(last_hook)
     }
 
     fn get_next_source_pull(self, hooks: &[HookConfig], remote_path: &str) -> String {
         if hooks.is_empty() {
             return remote_path.to_string();
         }
+
         let first_hook = &hooks[0];
-        self.compute_hook_output(first_hook.source(), *first_hook.hook_type())
+
+        match first_hook {
+            HookConfig::Zip(_) => {
+                let base_name = std::path::Path::new(remote_path)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("archive");
+
+                format!("{}.zip", base_name)
+            }
+        }
     }
 }

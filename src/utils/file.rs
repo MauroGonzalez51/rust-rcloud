@@ -1,6 +1,5 @@
 use anyhow::Context;
-use sha2::{Digest, Sha256};
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{io::Write, path::PathBuf};
 
 pub trait TempFileWriter {
     fn write_temp(&self) -> anyhow::Result<PathBuf>;
@@ -8,19 +7,14 @@ pub trait TempFileWriter {
 
 impl TempFileWriter for [u8] {
     fn write_temp(&self) -> anyhow::Result<PathBuf> {
-        let mut temp_path = std::env::temp_dir();
-        let uuid = uuid::Uuid::new_v4();
+        let mut temp_file = tempfile::NamedTempFile::new().context("failed to create temp file")?;
 
-        let mut hasher = Sha256::new();
-        hasher.update(self);
+        temp_file
+            .write_all(self)
+            .context("failed to write to temp_file")?;
 
-        let checksum = format!("{:x}", hasher.finalize());
-        let filename = format!("rcloud-{}-{}.tmp", uuid, &checksum[..8]);
-        temp_path.push(filename);
+        let (_, path) = temp_file.keep().context("failed to persist temp file")?;
 
-        let mut file = File::create(&temp_path).context("failed to create file")?;
-        file.write_all(self).context("failed to write files")?;
-
-        Ok(temp_path)
+        Ok(path)
     }
 }

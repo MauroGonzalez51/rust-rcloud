@@ -1,10 +1,9 @@
-use std::fs;
-
 use anyhow::Context;
 use rcloud::{
     Hook, HookContext,
     config::hooks::zip::{ZipHook, ZipHookConfig},
 };
+use std::fs;
 
 #[test]
 fn test_zip_single_file() -> anyhow::Result<()> {
