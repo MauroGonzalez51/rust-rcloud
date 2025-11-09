@@ -40,7 +40,7 @@ pub fn path_add(
 
     let remote_path = match remote_path {
         Some(value) => value,
-        None => &path::Prompt::path("remote path")
+        None => &path::Prompt::path("remote path:")
             .prompt()
             .context("failed to get remote path")?,
     };

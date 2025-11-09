@@ -73,7 +73,9 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
             }
         },
         Commands::Sync { action } => match action {
-            cli::commands::sync::command::SyncCommand::All => todo!(),
+            cli::commands::sync::command::SyncCommand::All { tags } => {
+                commands::sync::handlers::all_sync::all_sync(&args, &registry, tags)?
+            }
             cli::commands::sync::command::SyncCommand::Path { direction, path_id } => {
                 commands::sync::handlers::path_sync::path_sync(
                     &args, &registry, direction, path_id,
