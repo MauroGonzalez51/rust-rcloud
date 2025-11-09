@@ -139,7 +139,7 @@ impl Hook for ZipHook {
                     false => self
                         .process_file(path, &mut zip, options)
                         .context("failed to process file")?,
-                };
+                }
 
                 let cursor = zip.finish().context("failed to finish zip")?;
                 let zip_bytes = cursor.into_inner();
