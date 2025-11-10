@@ -55,13 +55,19 @@ impl ZipHook {
             let file_content = fs::read(entry.path())
                 .with_context(|| format!("failed to read file: {:?}", entry.path()))?;
 
-            zip.start_file(relative_path.to_string_lossy(), options)
-                .with_context(|| format!("failed to add file to zip: {:?}", relative_path))?;
+            let zip_path = relative_path
+                .components()
+                .filter_map(|c| c.as_os_str().to_str())
+                .collect::<Vec<_>>()
+                .join("/");
+
+            zip.start_file(&zip_path, options)
+                .with_context(|| format!("failed to add file to zip: {}", zip_path))?;
 
             zip.write_all(&file_content)
-                .context("faile to write file to zip")?;
+                .context("failed to write file to zip")?;
 
-            log_info!("added: {:?} ({} bytes)", relative_path, file_content.len());
+            log_info!("added: {} ({} bytes)", zip_path, file_content.len());
         }
 
         Ok(())
