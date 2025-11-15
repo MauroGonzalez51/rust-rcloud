@@ -27,6 +27,7 @@ pub fn path_sync(
     direction: &Option<HookExecType>,
     path_id: &Option<String>,
     force: &bool,
+    clean: &bool,
 ) -> anyhow::Result<()> {
     if *force {
         log_warn!("using --force");
@@ -62,6 +63,29 @@ pub fn path_sync(
         .clone();
 
     let hooks = &path_config.hooks;
+
+    match direction {
+        HookExecType::Push => {
+            if *clean {
+                log_info!(
+                    "current direction is {}. clean will be ignored",
+                    HookExecType::Push
+                );
+            }
+        }
+        HookExecType::Pull => {
+            if !std::path::Path::new(&path_config.local_path).exists() {
+                return Ok(());
+            }
+
+            std::fs::remove_dir_all(&path_config.local_path).with_context(|| {
+                format!(
+                    "failed to clean target directory: {}",
+                    path_config.local_path
+                )
+            })?
+        }
+    }
 
     match direction {
         HookExecType::Push => {

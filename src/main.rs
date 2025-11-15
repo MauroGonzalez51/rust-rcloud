@@ -85,12 +85,14 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                 direction,
                 path_id,
                 force,
+                clean,
             } => commands::sync::handlers::path_sync::path_sync(
                 &args,
                 &mut registry,
                 direction,
                 path_id,
                 force,
+                clean,
             )?,
         },
     }

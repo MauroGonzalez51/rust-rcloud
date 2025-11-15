@@ -37,6 +37,7 @@ pub fn all_sync(
                 &None,
                 &Some(path_id),
                 force_all,
+                &false,
             ) {
                 Ok(_) => {
                     log_info!("synced {} -> {}", local_path, remote_path);

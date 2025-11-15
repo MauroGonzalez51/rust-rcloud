@@ -22,5 +22,8 @@ pub enum SyncCommand {
 
         #[arg(short = 'F', long, help = "Force sending to remote")]
         force: bool,
+
+        #[arg(short = 'C', long, help = "Clean target directory before executing workflow")]
+        clean: bool,
     },
 }
