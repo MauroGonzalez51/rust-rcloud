@@ -83,4 +83,6 @@ pub enum Commands {
         #[command(subcommand)]
         action: SyncCommand,
     },
+    #[command(about = "Configure CLI")]
+    Configure,
 }

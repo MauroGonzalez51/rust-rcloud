@@ -95,6 +95,7 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                 clean,
             )?,
         },
+        Commands::Configure => commands::configure::setup::setup(&args)?,
     }
 
     Ok(())
