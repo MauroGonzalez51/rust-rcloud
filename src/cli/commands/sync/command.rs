@@ -11,6 +11,13 @@ pub enum SyncCommand {
 
         #[arg(short = 'F', long, help = "Force sending to remote (ALL)")]
         force_all: bool,
+
+        #[arg(
+            short = 'C',
+            long,
+            help = "Clean target directory before executing workflow (ALL)"
+        )]
+        clean_all: bool,
     },
     #[command(about = "Sync a specific path by ID")]
     Path {
@@ -23,7 +30,11 @@ pub enum SyncCommand {
         #[arg(short = 'F', long, help = "Force sending to remote")]
         force: bool,
 
-        #[arg(short = 'C', long, help = "Clean target directory before executing workflow")]
+        #[arg(
+            short = 'C',
+            long,
+            help = "Clean target directory before executing workflow"
+        )]
         clean: bool,
     },
 }

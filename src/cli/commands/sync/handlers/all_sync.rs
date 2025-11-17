@@ -6,6 +6,7 @@ pub fn all_sync(
     registry: &mut Registry,
     tags: &[String],
     force_all: &bool,
+    clean_all: &bool,
 ) -> anyhow::Result<()> {
     log_debug!("using tags: {:?}", tags);
 
@@ -37,7 +38,7 @@ pub fn all_sync(
                 &None,
                 &Some(path_id),
                 force_all,
-                &false,
+                clean_all,
             ) {
                 Ok(_) => {
                     log_info!("synced {} -> {}", local_path, remote_path);
