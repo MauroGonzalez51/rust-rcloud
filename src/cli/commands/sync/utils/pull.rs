@@ -79,7 +79,9 @@ pub fn pull(
 
     log_debug!("processed hash: {}", processed_hash);
 
-    utils::options::force(&HookExecType::Pull, force, path_config, &processed_hash)?;
+    if !utils::options::force(&HookExecType::Pull, force, path_config, &processed_hash)? {
+        return Ok(());
+    }
 
     log_info!("moving processed content to local_path");
 
