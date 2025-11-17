@@ -1,7 +1,18 @@
 [package]
 name = "rcloud"
+authors = ["MauroGonzalez51"]
+license = "MIT"
+description = "CLI wrapper for rclone"
+homepage = "https://github.com/MauroGonzalez51/rust-rcloud"
+repository = "https://github.com/MauroGonzalez51/rust-rcloud"
 version = "0.2.4"
 edition = "2024"
+
+[package.metadata.wix]
+upgrade-guid = "CE055E31-7C00-4FFC-BAA5-3F957EA43CC1"
+path-guid = "BE5DAE80-C464-4074-9FC8-BA35A8B28045"
+license = false
+eula = false
 
 [lib]
 name = "rcloud"
@@ -38,4 +49,9 @@ zip = { version = "6.0.0", features = ["deflate-flate2"] }
 [dev-dependencies]
 assert_fs = "1.1.3"
 predicates = "3.1.3"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
 
