@@ -57,6 +57,9 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                     provider,
                 )?
             }
+            cli::commands::remote::command::RemoteCommand::Ls { path, path_config } => {
+                commands::remote::handlers::ls::remote_ls(&args, &registry, path, path_config)?
+            }
         },
         Commands::Path { action } => match action {
             cli::commands::path::command::PathCommand::List => {

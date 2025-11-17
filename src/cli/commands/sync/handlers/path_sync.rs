@@ -31,7 +31,7 @@ pub fn path_sync(
     let path_id = match path_id {
         Some(value) => value.clone(),
         None => path::Prompt::path_config("Select the path to sync:", registry)
-            .context("failed to select remote")?
+            .context("failed to select path")?
             .clone(),
     };
 
