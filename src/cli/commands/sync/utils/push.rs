@@ -4,7 +4,7 @@ use crate::{
         prelude::{HookConfig, HookContext, HookExecType, PathConfig, Registry},
         remote::Remote,
     },
-    log_debug, log_info, log_success,
+    log_debug, log_info, log_success, log_warn,
     utils::hash,
 };
 use anyhow::Context;
@@ -25,8 +25,15 @@ pub fn push(
 
     log_debug!("calculated hash: {}", processed_hash);
 
-    if !utils::options::force(&HookExecType::Push, force, path_config, &processed_hash)? {
-        return Ok(());
+    match utils::options::force(&HookExecType::Push, force, path_config, &processed_hash) {
+        utils::options::ForceResult::Proceed => {}
+        utils::options::ForceResult::HashMatch => {
+            log_warn!("content unchanged (hash match). skipping");
+            return Ok(());
+        }
+        utils::options::ForceResult::PathNotFound => {
+            unreachable!();
+        }
     }
 
     let context = utils::execute_hooks::execute_hooks(

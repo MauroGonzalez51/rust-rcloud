@@ -4,7 +4,7 @@ use crate::{
         prelude::{HookConfig, HookContext, HookExecType, PathConfig, Registry},
         remote::Remote,
     },
-    log_debug, log_info, log_success,
+    log_debug, log_info, log_success, log_warn,
     utils::hash,
 };
 use anyhow::Context;
@@ -79,8 +79,15 @@ pub fn pull(
 
     log_debug!("processed hash: {}", processed_hash);
 
-    if !utils::options::force(&HookExecType::Pull, force, path_config, &processed_hash)? {
-        return Ok(());
+    match utils::options::force(&HookExecType::Pull, force, path_config, &processed_hash) {
+        utils::options::ForceResult::Proceed => {}
+        utils::options::ForceResult::HashMatch => {
+            log_warn!("content unchanged (hash match). skipping");
+            return Ok(());
+        }
+        utils::options::ForceResult::PathNotFound => {
+            log_info!("local path does not exist, proceding with sync");
+        }
     }
 
     log_info!("moving processed content to local_path");

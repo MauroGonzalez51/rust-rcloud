@@ -2,7 +2,14 @@ use crate::{
     config::prelude::{HookExecType, PathConfig},
     log_info, log_warn,
 };
-use anyhow::Context;
+use anyhow::{Context, Ok};
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ForceResult {
+    Proceed,
+    HashMatch,
+    PathNotFound,
+}
 
 /// Cleans the local path before synchronization if the direction is Pull and the `clean` flag is set.
 ///
@@ -61,37 +68,36 @@ pub fn force(
     force: &bool,
     path_config: &PathConfig,
     processed_hash: &str,
-) -> anyhow::Result<bool> {
+) -> ForceResult {
     match direction {
         HookExecType::Push => {
             if !force {
                 if let Some(stored_hash) = &path_config.hash {
                     if stored_hash == processed_hash {
                         log_warn!("content unchanged (hash match). skipping");
-                        return Ok(false);
+                        return ForceResult::HashMatch;
                     }
                 }
             }
 
-            Ok(true)
+            ForceResult::Proceed
         }
         HookExecType::Pull => {
             if !force {
                 if let Some(stored_hash) = &path_config.hash {
                     let local_path_exists = std::path::Path::new(&path_config.local_path).exists();
 
-                    if stored_hash == processed_hash && local_path_exists {
-                        log_warn!("content unchanged (hash match). skipping");
-                        return Ok(false);
-                    }
+                    if stored_hash == processed_hash {
+                        if local_path_exists {
+                            return ForceResult::HashMatch;
+                        }
 
-                    if !local_path_exists {
-                        log_info!("local path does not exists, syncing despite hash match");
+                        return ForceResult::PathNotFound;
                     }
                 }
             }
 
-            Ok(true)
+            ForceResult::Proceed
         }
     }
 }
