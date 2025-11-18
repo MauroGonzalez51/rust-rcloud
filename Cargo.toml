@@ -44,7 +44,7 @@ tokio = "1.48.0"
 transaction = "0.2.1"
 uuid = { version = "1.16.0", features = ["v4"] }
 walkdir = "2.5.0"
-zip = { version = "6.0.0", features = ["deflate-flate2"] }
+zip = { version = "6.0.0", features = ["deflate-flate2", "zstd"] }
 
 [dev-dependencies]
 assert_fs = "1.1.3"

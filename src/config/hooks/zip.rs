@@ -132,7 +132,7 @@ impl Hook for ZipHook {
 
                 let options: zip::write::FileOptions<'_, ()> = zip::write::FileOptions::default()
                     .compression_level(self.level)
-                    .compression_method(zip::CompressionMethod::Deflated);
+                    .compression_method(zip::CompressionMethod::Zstd);
 
                 let exclude_set = self
                     .build_exclude_set()
@@ -199,7 +199,7 @@ impl ZipHookConfig {
         match exec_type {
             HookExecType::Push => {
                 let level = Text::new("Compression level (0-9):")
-                    .with_default("6")
+                    .with_default("9")
                     .prompt()
                     .context("failed to get compression level")?
                     .parse::<i64>()
