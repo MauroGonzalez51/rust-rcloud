@@ -3,7 +3,7 @@ use crate::{
 };
 use anyhow::Context;
 
-pub fn setup(context: CommandContext) -> anyhow::Result<()> {
+pub fn configure_setup(context: CommandContext) -> anyhow::Result<()> {
     log_info!("checking rclone availability...");
     match std::process::Command::new(&context.global.rclone)
         .arg("version")

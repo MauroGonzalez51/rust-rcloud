@@ -1,5 +1,5 @@
 use crate::{
-    cli::{commands::sync::handlers::path_sync, context::CommandContext},
+    cli::{commands::sync::handlers::single, context::CommandContext},
     log_debug, log_error, log_info, log_warn,
 };
 use anyhow::Context;
@@ -10,7 +10,7 @@ pub struct LocalArgs<'a> {
     pub clean_all: &'a bool,
 }
 
-pub fn all_sync(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     log_debug!("using tags: {:?}", context.local.tags);
 
     let matching_paths_ids: Vec<String> = match context.local.tags.is_empty() {
@@ -35,21 +35,19 @@ pub fn all_sync(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
         if let Some((local_path, remote_path)) = path_info {
             log_info!("Sync path: {} -> {}", local_path, remote_path);
 
-            let args = path_sync::LocalArgs {
+            let args = single::LocalArgs {
                 direction: &None,
                 path_id: &Some(path_id),
                 force: context.local.force_all,
                 clean: context.local.clean_all,
             };
 
-            let path_context = CommandContext::new(
-                context.global.clone(),
-                std::mem::take(&mut context.registry),
-                args,
-            );
+            let path_context =
+                CommandContext::new(context.global.clone(), context.registry.clone(), args);
 
-            match crate::cli::commands::sync::handlers::path_sync::path_sync(path_context) {
-                Ok(_) => {
+            match single::sync_single(path_context) {
+                Ok(_context) => {
+                    context.registry = _context.registry;
                     log_info!("synced {} -> {}", local_path, remote_path);
                 }
                 Err(err) => {

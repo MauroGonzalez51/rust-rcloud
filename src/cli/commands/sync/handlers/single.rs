@@ -15,7 +15,9 @@ pub struct LocalArgs<'a> {
     pub clean: &'a bool,
 }
 
-pub fn path_sync(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+pub fn sync_single(
+    mut context: CommandContext<LocalArgs>,
+) -> anyhow::Result<CommandContext<LocalArgs>> {
     if *context.local.force {
         log_warn!("using --force");
     }
@@ -73,5 +75,5 @@ pub fn path_sync(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
         )?,
     }
 
-    Ok(())
+    Ok(context)
 }
