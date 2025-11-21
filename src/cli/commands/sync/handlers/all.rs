@@ -1,21 +1,24 @@
-use crate::{cli::parser::Args, config::prelude::*, log_debug, log_error, log_info, log_warn};
+use crate::{
+    cli::{commands::sync::handlers::single, context::CommandContext},
+    log_debug, log_error, log_info, log_warn,
+};
 use anyhow::Context;
 
-pub fn all_sync(
-    args: &Args,
-    registry: &mut Registry,
-    tags: &[String],
-    force_all: &bool,
-    clean_all: &bool,
-) -> anyhow::Result<()> {
-    log_debug!("using tags: {:?}", tags);
+pub struct LocalArgs<'a> {
+    pub tags: &'a [String],
+    pub force_all: &'a bool,
+    pub clean_all: &'a bool,
+}
 
-    let matching_paths_ids: Vec<String> = match tags.is_empty() {
-        true => registry.paths.iter().map(|p| p.id.clone()).collect(),
-        false => registry
+pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+    log_debug!("using tags: {:?}", context.local.tags);
+
+    let matching_paths_ids: Vec<String> = match context.local.tags.is_empty() {
+        true => context.paths.iter().map(|p| p.id.clone()).collect(),
+        false => context
             .paths
             .iter()
-            .filter(|p| p.tags.iter().any(|t| tags.contains(t)))
+            .filter(|p| p.tags.iter().any(|t| context.local.tags.contains(t)))
             .map(|p| p.id.clone())
             .collect(),
     };
@@ -23,7 +26,7 @@ pub fn all_sync(
     log_info!("found {} path(s) to sync", matching_paths_ids.len());
 
     for path_id in matching_paths_ids {
-        let path_info = registry
+        let path_info = context
             .paths
             .iter()
             .find(|p| p.id == path_id)
@@ -32,15 +35,19 @@ pub fn all_sync(
         if let Some((local_path, remote_path)) = path_info {
             log_info!("Sync path: {} -> {}", local_path, remote_path);
 
-            match crate::cli::commands::sync::handlers::path_sync::path_sync(
-                args,
-                registry,
-                &None,
-                &Some(path_id),
-                force_all,
-                clean_all,
-            ) {
-                Ok(_) => {
+            let args = single::LocalArgs {
+                direction: &None,
+                path_id: &Some(path_id),
+                force: context.local.force_all,
+                clean: context.local.clean_all,
+            };
+
+            let path_context =
+                CommandContext::new(context.global.clone(), context.registry.clone(), args);
+
+            match single::sync_single(path_context) {
+                Ok(_context) => {
+                    context.registry = _context.registry;
                     log_info!("synced {} -> {}", local_path, remote_path);
                 }
                 Err(err) => {

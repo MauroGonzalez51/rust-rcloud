@@ -1,27 +1,26 @@
 use crate::{
-    cli::{commands::path::utils::path, parser::Args},
-    config::prelude::*,
+    cli::{commands::path::utils::path, context::CommandContext},
     log_info, log_success, log_warn,
 };
 use anyhow::Context;
 
-pub fn path_remove(
-    _args: &Args,
-    registry: &mut Registry,
-    path_id: &Option<String>,
-) -> anyhow::Result<()> {
-    if registry.paths.is_empty() {
+pub struct LocalArgs<'a> {
+    pub path_id: &'a Option<String>,
+}
+
+pub fn path_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+    if context.paths.is_empty() {
         log_warn!("no paths configured");
         return Ok(());
     }
 
-    let path_id = match path_id {
+    let path_id = match context.local.path_id {
         Some(value) => value,
-        None => &path::Prompt::path_config("Select a record:", registry)
+        None => &path::Prompt::path_config("Select a record:", &context.registry)
             .context("failed to select path config")?,
     };
 
-    let path = registry
+    let path = context
         .paths
         .iter()
         .find(|p| p.id == *path_id)
@@ -30,7 +29,7 @@ pub fn path_remove(
 
     log_info!("Removing path: {} -> {}", path.local_path, path.remote_path);
 
-    registry
+    context
         .tx(|rgx| {
             rgx.paths.retain(|r| r.id != path.id);
         })

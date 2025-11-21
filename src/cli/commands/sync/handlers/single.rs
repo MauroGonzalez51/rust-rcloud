@@ -1,26 +1,28 @@
 use crate::{
     cli::{
         commands::{path::utils::path, sync::utils},
-        parser::Args,
+        context::CommandContext,
     },
-    config::prelude::{HookExecType, Registry},
+    config::prelude::HookExecType,
     log_warn,
 };
 use anyhow::Context;
 
-pub fn path_sync(
-    args: &Args,
-    registry: &mut Registry,
-    direction: &Option<HookExecType>,
-    path_id: &Option<String>,
-    force: &bool,
-    clean: &bool,
-) -> anyhow::Result<()> {
-    if *force {
+pub struct LocalArgs<'a> {
+    pub direction: &'a Option<HookExecType>,
+    pub path_id: &'a Option<String>,
+    pub force: &'a bool,
+    pub clean: &'a bool,
+}
+
+pub fn sync_single(
+    mut context: CommandContext<LocalArgs>,
+) -> anyhow::Result<CommandContext<LocalArgs>> {
+    if *context.local.force {
         log_warn!("using --force");
     }
 
-    let direction = match direction {
+    let direction = match context.local.direction {
         Some(value) => value,
         None => &HookExecType::select("Select direction:")
             .with_vim_mode(true)
@@ -28,21 +30,21 @@ pub fn path_sync(
             .context("failed to select direction")?,
     };
 
-    let path_id = match path_id {
+    let path_id = match context.local.path_id {
         Some(value) => value.clone(),
-        None => path::Prompt::path_config("Select the path to sync:", registry)
+        None => path::Prompt::path_config("Select the path to sync:", &context.registry)
             .context("failed to select path")?
             .clone(),
     };
 
-    let path_config = registry
+    let path_config = context
         .paths
         .iter()
         .find(|p| p.id == path_id)
         .ok_or_else(|| anyhow::anyhow!("path does not exists"))?
         .clone();
 
-    let remote_config = registry
+    let remote_config = context
         .remotes
         .iter()
         .find(|r| r.id == path_config.remote_id)
@@ -51,27 +53,27 @@ pub fn path_sync(
 
     let hooks = &path_config.hooks;
 
-    utils::options::clean(direction, clean, &path_config.local_path)?;
+    utils::options::clean(direction, context.local.clean, &path_config.local_path)?;
 
     match direction {
         HookExecType::Push => utils::push::push(
-            args,
-            registry,
+            &mut context.registry,
+            &context.global.rclone,
             &remote_config,
             &path_config,
             &hooks.push,
-            force,
+            context.local.force,
         )?,
 
         HookExecType::Pull => utils::pull::pull(
-            args,
-            registry,
+            &mut context.registry,
+            &context.global.rclone,
             &remote_config,
             &path_config,
             &hooks.pull,
-            force,
+            context.local.force,
         )?,
     }
 
-    Ok(())
+    Ok(context)
 }

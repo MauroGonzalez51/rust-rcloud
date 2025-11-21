@@ -1,30 +1,31 @@
 use crate::{
-    cli::{commands::remote::utils::remote, parser::Args},
-    config::prelude::*,
+    cli::{commands::remote::utils::remote, context::CommandContext},
     log_info, log_success, log_warn,
 };
 use anyhow::Context;
 
-pub fn remote_remove(
-    _args: &Args,
-    registry: &mut Registry,
-    id: &Option<String>,
-) -> anyhow::Result<()> {
-    if registry.remotes.is_empty() {
+pub struct LocalArgs<'a> {
+    pub id: &'a Option<String>,
+}
+
+pub fn remote_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+    if context.remotes.is_empty() {
         log_warn!("no remotes configured");
         return Ok(());
     }
 
-    let remote = match id {
+    let remote = match context.local.id {
         Some(value) => {
-            if !registry.remotes.iter().any(|r| r.id == *value) {
+            if !context.remotes.iter().any(|r| r.id == *value) {
                 anyhow::bail!("remote with '{}' not found", value);
             }
 
-            remote::Utils::remote_by_id(registry, value).context("remote not found")?
+            remote::Utils::remote_by_id(&context.registry, value).context("remote not found")?
         }
-        None => remote::Prompt::remote::<fn(inquire::Select<String>) -> inquire::Select<String>>("Select a remote to remove:",
-            registry, None,
+        None => remote::Prompt::remote::<fn(inquire::Select<String>) -> inquire::Select<String>>(
+            "Select a remote to remove:",
+            &context.registry,
+            None,
         )
         .context("failed to execute prompt")?,
     };
@@ -35,7 +36,7 @@ pub fn remote_remove(
         remote.provider
     );
 
-    registry
+    context
         .tx(|rgx| {
             rgx.remotes.retain(|r| r.id != remote.id);
         })

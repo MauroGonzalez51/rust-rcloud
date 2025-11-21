@@ -1,32 +1,32 @@
 use crate::{
-    cli::{commands::path::utils::path, parser::Args},
+    cli::{commands::path::utils::path, context::CommandContext},
     config::prelude::*,
     log_debug, log_warn,
 };
 use anyhow::Context;
 use inquire::Confirm;
 
-pub fn path_add(
-    _args: &Args,
-    registry: &mut Registry,
-    remote_id: &Option<String>,
-    local_path: &Option<String>,
-    remote_path: &Option<String>,
-) -> anyhow::Result<()> {
-    if registry.remotes.is_empty() {
+pub struct LocalArgs<'a> {
+    pub remote_id: &'a Option<String>,
+    pub local_path: &'a Option<String>,
+    pub remote_path: &'a Option<String>,
+}
+
+pub fn path_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+    if context.registry.remotes.is_empty() {
         log_warn!("there are no remotes configured");
         return Ok(());
     }
 
-    let remote_id = match remote_id {
+    let remote_id = match context.local.remote_id {
         Some(value) => value,
         None => &path::Prompt::remote_id::<
             fn(inquire::Select<'_, String>) -> inquire::Select<'_, String>,
-        >(registry, None)
+        >(&context.registry, None)
         .context("failed to get remote_id")?,
     };
 
-    let local_path = match local_path {
+    let local_path = match context.local.local_path {
         Some(value) => value,
         None => &path::Prompt::path("local path:")
             .prompt()
@@ -38,7 +38,7 @@ pub fn path_add(
         .to_string_lossy()
         .to_string();
 
-    let remote_path = match remote_path {
+    let remote_path = match context.local.remote_path {
         Some(value) => value,
         None => &path::Prompt::path("remote path:")
             .prompt()
@@ -117,7 +117,7 @@ pub fn path_add(
     let mut tags: Vec<String> = vec![];
 
     if add_tags {
-        tags = TagOption::multiple_select("Select tags:", registry)
+        tags = TagOption::multiple_select("Select tags:", &context.registry)
             .context("failed to select tags")?;
     }
 
@@ -142,7 +142,7 @@ pub fn path_add(
         .context("failed to get confirmation")?;
 
     if confirm_save {
-        registry
+        context
             .tx(|rgx| {
                 rgx.paths.push(path_config);
             })

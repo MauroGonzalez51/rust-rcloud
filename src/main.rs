@@ -3,7 +3,10 @@ mod config;
 mod utils;
 
 use crate::{
-    cli::{commands, parser::Args, parser::Commands},
+    cli::{
+        context::CommandContext,
+        parser::{Cli, Commands},
+    },
     config::prelude::*,
     utils::logger::LOG,
 };
@@ -11,14 +14,34 @@ use anyhow::{Context, bail};
 use clap::Parser;
 use dotenvy::dotenv;
 
-fn run() -> anyhow::Result<(), anyhow::Error> {
-    let args = Args::parse();
+use_handlers! {
+    simple: {
+        (remote, list),
+        (path, list),
+        (registry, edit),
+        (configure, setup)
+    },
+    with_args: {
+        (remote, add),
+        (remote, remove),
+        (remote, update),
+        (remote, ls),
+        (path, add),
+        (path, remove),
+        (sync, single),
+        (sync, all),
+    }
+}
 
-    if args.debug {
+fn run() -> anyhow::Result<(), anyhow::Error> {
+    let args = Cli::parse();
+
+    if args.global.debug {
         LOG.set_level(utils::logger::LogLevel::Debug);
     }
 
     let registry_path = args
+        .global
         .registry
         .clone()
         .ok_or_else(|| anyhow::anyhow!("registry file not especified"))?;
@@ -30,83 +53,102 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
         );
     }
 
-    let mut registry = Registry::load(&registry_path).context("failed to load registry")?;
+    let registry = Registry::load(&registry_path).context("failed to load registry")?;
 
-    match &args.command {
+    let Cli { global, command } = args;
+
+    match &command {
         Commands::Registry { action } => match action {
             cli::commands::registry::command::RegistryCommand::Edit => {
-                commands::registry::handlers::edit::registry_edit(&args)?
+                registry_edit(command_context!(global, registry))?
             }
         },
+
         Commands::Remote { action } => match action {
             cli::commands::remote::command::RemoteCommand::List => {
-                commands::remote::handlers::list::remote_list(&args, &registry)
+                remote_list(command_context!(global, registry));
             }
-            cli::commands::remote::command::RemoteCommand::Add { name, provider } => {
-                commands::remote::handlers::add::remote_add(&args, &mut registry, name, provider)?
-            }
+
+            cli::commands::remote::command::RemoteCommand::Add { name, provider } => remote_add(
+                command_context!(global, registry, RemoteAddArgs { name, provider }),
+            )?,
+
             cli::commands::remote::command::RemoteCommand::Remove { id } => {
-                commands::remote::handlers::remove::remote_remove(&args, &mut registry, id)?
+                remote_remove(command_context!(global, registry, RemoteRemoveArgs { id }))?
             }
+
             cli::commands::remote::command::RemoteCommand::Update { id, name, provider } => {
-                commands::remote::handlers::update::remote_update(
-                    &args,
-                    &mut registry,
-                    id,
-                    name,
-                    provider,
-                )?
+                remote_update(command_context!(
+                    global,
+                    registry,
+                    RemoteUpdateArgs { id, name, provider }
+                ))?
             }
-            cli::commands::remote::command::RemoteCommand::Ls { path, path_config } => {
-                commands::remote::handlers::ls::remote_ls(&args, &registry, path, path_config)?
-            }
+
+            cli::commands::remote::command::RemoteCommand::Ls { path, path_config } => remote_ls(
+                command_context!(global, registry, RemoteLsArgs { path, path_config }),
+            )?,
         },
+
         Commands::Path { action } => match action {
             cli::commands::path::command::PathCommand::List => {
-                commands::path::handlers::list::path_list(&args, &registry)
+                path_list(command_context!(global, registry));
             }
+
             cli::commands::path::command::PathCommand::Add {
                 remote_id,
                 local_path,
                 remote_path,
-            } => commands::path::handlers::add::path_add(
-                &args,
-                &mut registry,
-                remote_id,
-                local_path,
-                remote_path,
+            } => path_add(command_context!(
+                global,
+                registry,
+                PathAddArgs {
+                    remote_id,
+                    local_path,
+                    remote_path
+                }
+            ))?,
+
+            cli::commands::path::command::PathCommand::Remove { id } => path_remove(
+                command_context!(global, registry, PathRemoveArgs { path_id: id }),
             )?,
-            cli::commands::path::command::PathCommand::Remove { id } => {
-                commands::path::handlers::remove::path_remove(&args, &mut registry, id)?
-            }
         },
+
         Commands::Sync { action } => match action {
             cli::commands::sync::command::SyncCommand::All {
                 tags,
                 force_all,
                 clean_all,
-            } => commands::sync::handlers::all_sync::all_sync(
-                &args,
-                &mut registry,
-                tags,
-                force_all,
-                clean_all,
-            )?,
+            } => sync_all(command_context!(
+                global,
+                registry,
+                SyncAllArgs {
+                    tags,
+                    force_all,
+                    clean_all
+                }
+            ))?,
+
             cli::commands::sync::command::SyncCommand::Path {
                 direction,
                 path_id,
                 force,
                 clean,
-            } => commands::sync::handlers::path_sync::path_sync(
-                &args,
-                &mut registry,
-                direction,
-                path_id,
-                force,
-                clean,
-            )?,
+            } => {
+                sync_single(command_context!(
+                    global,
+                    registry,
+                    SyncSingleArgs {
+                        direction,
+                        path_id,
+                        force,
+                        clean
+                    }
+                ))?;
+            }
         },
-        Commands::Configure => commands::configure::setup::setup(&args)?,
+
+        Commands::Configure => configure_setup(command_context!(global, registry))?,
     }
 
     Ok(())
