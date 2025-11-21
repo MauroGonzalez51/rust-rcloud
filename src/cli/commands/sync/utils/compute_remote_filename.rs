@@ -24,5 +24,6 @@ pub fn compute_remote_filename(hooks: &[HookConfig], base_name: &str) -> String 
 
     match last_hook {
         HookConfig::Zip(_) => format!("{}.zip", base_name),
+        HookConfig::Backup(_) => todo!(),
     }
 }

@@ -1,4 +1,7 @@
-use crate::config::hooks::zip::{ZipHook, ZipHookConfig};
+use crate::config::hooks::{
+    backup::{BackupHook, BackupHookConfig},
+    zip::{ZipHook, ZipHookConfig},
+};
 use clap::ValueEnum;
 use inquire_derive::Selectable;
 use serde::{Deserialize, Serialize};
@@ -14,12 +17,14 @@ pub trait Hook: std::fmt::Debug + Send + Sync {
 #[derive(Debug, Clone, Copy, Selectable)]
 pub enum Hooks {
     Zip,
+    Backup,
 }
 
 impl std::fmt::Display for Hooks {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Hooks::Zip => write!(f, "Zip Compression"),
+            Hooks::Backup => write!(f, "Backup"),
         }
     }
 }
@@ -67,12 +72,14 @@ impl HookContext {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HookConfig {
     Zip(ZipHookConfig),
+    Backup(BackupHookConfig),
 }
 
 impl From<HookConfig> for Box<dyn Hook> {
     fn from(val: HookConfig) -> Self {
         match val {
             HookConfig::Zip(cfg) => Box::new(ZipHook::from(cfg)),
+            HookConfig::Backup(cfg) => Box::from(BackupHook::from(cfg)),
         }
     }
 }
@@ -83,6 +90,11 @@ impl std::fmt::Display for HookConfig {
             HookConfig::Zip(cfg) => {
                 write!(f, "Zip(level: {:?}, source: {})", cfg.level, cfg.source)
             }
+            HookConfig::Backup(cfg) => write!(
+                f,
+                "Backup(source: {}, destination: {})",
+                cfg.source, cfg.destination
+            ),
         }
     }
 }
@@ -91,18 +103,21 @@ impl HookConfig {
     pub fn source(&self) -> &String {
         match self {
             HookConfig::Zip(cfg) => &cfg.source,
+            HookConfig::Backup(cfg) => &cfg.source,
         }
     }
 
     pub fn exec_type(&self) -> &HookExecType {
         match self {
             HookConfig::Zip(cfg) => &cfg.exec,
+            HookConfig::Backup(cfg) => &cfg.exec,
         }
     }
 
     pub fn hook_type(&self) -> &Hooks {
         match self {
             HookConfig::Zip(_) => &Hooks::Zip,
+            HookConfig::Backup(_) => &Hooks::Backup,
         }
     }
 }

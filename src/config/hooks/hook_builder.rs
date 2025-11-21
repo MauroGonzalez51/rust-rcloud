@@ -100,11 +100,16 @@ impl HookBuilder<Ready> {
                     &self.get_next_source_push(&list, &local_path),
                 )
                 .context("failed to build hook")?,
+
                 HookExecType::Pull => ZipHookConfig::build(
                     hook_exec_type,
                     &self.get_next_source_pull(&list, &remote_path),
                 )
                 .context("failed to build hook")?,
+            },
+            Hooks::Backup => match hook_exec_type {
+                HookExecType::Push => todo!(),
+                HookExecType::Pull => todo!(),
             },
         };
 
@@ -120,6 +125,9 @@ impl HookBuilder<Ready> {
                     .unwrap_or("output");
 
                 format!("{}.zip", base_name)
+            }
+            HookConfig::Backup(_cfg) => {
+                todo!()
             }
         }
     }
@@ -149,6 +157,7 @@ impl HookBuilder<Ready> {
 
                 format!("{}.zip", base_name)
             }
+            HookConfig::Backup(_) => todo!(),
         }
     }
 }
