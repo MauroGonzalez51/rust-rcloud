@@ -1,5 +1,5 @@
 use crate::{
-    cli::{commands::sync::utils, parser::Args},
+    cli::commands::sync::utils,
     config::{
         prelude::{HookConfig, HookContext, HookExecType, PathConfig, Registry},
         remote::Remote,
@@ -10,8 +10,8 @@ use crate::{
 use anyhow::Context;
 
 pub fn pull(
-    args: &Args,
     registry: &mut Registry,
+    rclone_path: &str,
     remote_config: &Remote,
     path_config: &PathConfig,
     hooks: &[HookConfig],
@@ -40,7 +40,7 @@ pub fn pull(
     log_debug!("remote_file_path: {:?}", remote_file_path);
 
     let status = utils::execute_rclone::execute_rclone(
-        &args.rclone,
+        rclone_path,
         &remote_file_path,
         temp_dir
             .path()

@@ -1,7 +1,4 @@
-use crate::{
-    cli::{commands::path::utils::path, parser::Args},
-    config::prelude::Registry,
-};
+use crate::cli::{commands::path::utils::path, context::CommandContext};
 use anyhow::Context;
 
 fn execute_rclone(rclone_path: &str, path: &str) -> anyhow::Result<std::process::ExitStatus> {
@@ -11,14 +8,14 @@ fn execute_rclone(rclone_path: &str, path: &str) -> anyhow::Result<std::process:
         .with_context(|| format!("failed to execute rclone ls {}", path))
 }
 
-pub fn remote_ls(
-    args: &Args,
-    registry: &Registry,
-    path: &Option<String>,
-    path_config: &Option<String>,
-) -> anyhow::Result<()> {
-    if let Some(path) = path {
-        let status = execute_rclone(&args.rclone, path)?;
+pub struct LocalArgs<'a> {
+    pub path: &'a Option<String>,
+    pub path_config: &'a Option<String>,
+}
+
+pub fn remote_ls(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+    if let Some(path) = context.local.path {
+        let status = execute_rclone(&context.global.rclone, path)?;
 
         if !status.success() {
             anyhow::bail!("rclone remote ls failed");
@@ -27,26 +24,26 @@ pub fn remote_ls(
         return Ok(());
     };
 
-    let path_id = match path_config {
+    let path_id = match context.local.path_config {
         Some(id) => id,
-        None => &path::Prompt::path_config("Select the path:", registry)
+        None => &path::Prompt::path_config("Select the path:", &context.registry)
             .context("failed to select path")?,
     };
 
-    let path_config = registry
+    let path_config = context
         .paths
         .iter()
         .find(|p| p.id == *path_id)
         .ok_or_else(|| anyhow::anyhow!("path does not exists"))?;
 
-    let remote_config = registry
+    let remote_config = context
         .remotes
         .iter()
         .find(|r| r.id == *path_config.remote_id)
         .ok_or_else(|| anyhow::anyhow!("remote does not exists"))?;
 
     let status = execute_rclone(
-        &args.rclone,
+        &context.global.rclone,
         &format!("{}:{}", remote_config.remote_name, path_config.remote_path),
     )?;
 

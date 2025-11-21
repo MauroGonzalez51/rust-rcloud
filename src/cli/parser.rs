@@ -4,16 +4,10 @@ use crate::cli::commands::{
 };
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 
-#[derive(Debug, Parser)]
-#[command(
-    author,
-    version,
-    about = "rust-rcloud CLI",
-    arg_required_else_help = true
-)]
-pub struct Args {
+#[derive(Debug, Clone, Args)]
+pub struct GlobalParameters {
     #[arg(
         short,
         long,
@@ -56,6 +50,25 @@ pub struct Args {
         default_value = "rclone"
     )]
     pub rclone: String,
+}
+
+impl From<Cli> for GlobalParameters {
+    fn from(value: Cli) -> Self {
+        let global = value.global;
+        Self { ..global }
+    }
+}
+
+#[derive(Debug, Parser)]
+#[command(
+    author,
+    version,
+    about = "rust-rcloud CLI",
+    arg_required_else_help = true
+)]
+pub struct Cli {
+    #[command(flatten)]
+    pub global: GlobalParameters,
 
     #[command(subcommand)]
     pub command: Commands,

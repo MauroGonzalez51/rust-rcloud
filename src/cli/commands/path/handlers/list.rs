@@ -1,9 +1,8 @@
+use crate::{cli::context::CommandContext, log_warn};
 use console::Style;
 
-use crate::{cli::parser::Args, config::prelude::*, log_warn};
-
-pub fn path_list(_args: &Args, registry: &Registry) {
-    if registry.paths.is_empty() {
+pub fn path_list(context: CommandContext) {
+    if context.paths.is_empty() {
         log_warn!("no paths configured");
         return;
     }
@@ -15,7 +14,7 @@ pub fn path_list(_args: &Args, registry: &Registry) {
     let hooks_style = Style::new().bold().magenta();
     let tags_style = Style::new().dim().italic();
 
-    for (i, path) in registry.paths.iter().enumerate() {
+    for (i, path) in context.paths.iter().enumerate() {
         let tags_display = match path.tags.is_empty() {
             true => String::new(),
             false => format!(" [tags: {}]", path.tags.join(", ")),

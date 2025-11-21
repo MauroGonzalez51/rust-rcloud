@@ -1,5 +1,5 @@
 use crate::{
-    cli::{commands::sync::utils, parser::Args},
+    cli::commands::sync::utils,
     config::{
         prelude::{HookConfig, HookContext, HookExecType, PathConfig, Registry},
         remote::Remote,
@@ -11,8 +11,8 @@ use anyhow::Context;
 use std::path::PathBuf;
 
 pub fn push(
-    args: &Args,
     registry: &mut Registry,
+    rclone_path: &str,
     remote_config: &Remote,
     path_config: &PathConfig,
     hooks: &[HookConfig],
@@ -85,7 +85,7 @@ pub fn push(
     log_debug!("final_path: {:?}", final_path);
 
     let status = utils::execute_rclone::execute_rclone(
-        &args.rclone,
+        rclone_path,
         final_path
             .to_str()
             .context("failed to convert final_path to str")?,

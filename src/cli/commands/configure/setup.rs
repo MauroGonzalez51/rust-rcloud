@@ -1,9 +1,11 @@
-use crate::{cli::parser::Args, config::prelude::Registry, log_info, log_success, log_warn};
+use crate::{
+    cli::context::CommandContext, config::prelude::Registry, log_info, log_success, log_warn,
+};
 use anyhow::Context;
 
-pub fn setup(args: &Args) -> anyhow::Result<()> {
+pub fn setup(context: CommandContext) -> anyhow::Result<()> {
     log_info!("checking rclone availability...");
-    match std::process::Command::new(&args.rclone)
+    match std::process::Command::new(&context.global.rclone)
         .arg("version")
         .output()
     {
@@ -15,14 +17,15 @@ pub fn setup(args: &Args) -> anyhow::Result<()> {
         _ => {
             log_warn!(
                 "rclone not found at '{}'. Make sure it's installed and accessible.",
-                args.rclone
+                &context.global.rclone
             );
 
             println!("you can download it from: https://rclone.org/downloads/");
         }
     }
 
-    let registry_path = args
+    let registry_path = context
+        .global
         .registry
         .clone()
         .ok_or_else(|| anyhow::anyhow!("registry file not specified"))?;

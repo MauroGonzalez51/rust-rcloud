@@ -33,7 +33,7 @@ pub enum RegistryError {
     },
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Registry {
     #[serde(skip)]
     pub registry_path: PathBuf,

@@ -1,12 +1,12 @@
-use crate::{cli::parser::Args, config::prelude::*};
+use crate::cli::context::CommandContext;
 use console::Style;
 
-pub fn remote_list(_args: &Args, registry: &Registry) {
+pub fn remote_list(context: CommandContext) {
     let remote_name = Style::new().bold().green();
     let remote_provider = Style::new().italic();
     let remote_id = Style::new().underlined();
 
-    if registry.remotes.is_empty() {
+    if context.registry.remotes.is_empty() {
         println!(
             "{}",
             Style::new()
@@ -16,7 +16,7 @@ pub fn remote_list(_args: &Args, registry: &Registry) {
         )
     }
 
-    for (i, remote) in registry.remotes.iter().enumerate() {
+    for (i, remote) in context.remotes.iter().enumerate() {
         println!(
             "> {}. {} ({}) [id: {}]",
             i + 1,

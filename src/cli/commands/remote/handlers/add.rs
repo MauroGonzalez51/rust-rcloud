@@ -1,18 +1,18 @@
 use crate::{
-    cli::{commands::remote::utils::remote, parser::Args},
+    cli::{commands::remote::utils::remote, context::CommandContext},
     config::prelude::*,
     log_debug, log_success,
 };
 use anyhow::Context;
 use uuid::Uuid;
 
-pub fn remote_add(
-    _args: &Args,
-    registry: &mut Registry,
-    name: &Option<String>,
-    provider: &Option<String>,
-) -> anyhow::Result<()> {
-    let remote_name = match name {
+pub struct LocalArgs<'a> {
+    pub name: &'a Option<String>,
+    pub provider: &'a Option<String>,
+}
+
+pub fn remote_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+    let remote_name = match context.local.name {
         Some(value) => value,
         None => &remote::Prompt::name()
             .with_help_message(
@@ -23,7 +23,7 @@ pub fn remote_add(
             .clone(),
     };
 
-    let provider = match provider {
+    let provider = match context.local.provider {
         Some(value) => value,
         None => &remote::Prompt::provider()
             .prompt()
@@ -33,7 +33,7 @@ pub fn remote_add(
 
     log_debug!("[ INFO ] adding remote '{remote_name}' ({provider}) to registry");
 
-    registry
+    context
         .tx(|rgx| {
             rgx.remotes.push(Remote {
                 id: Uuid::new_v4().to_string(),

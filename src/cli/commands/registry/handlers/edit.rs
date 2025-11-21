@@ -1,9 +1,8 @@
+use crate::cli::context::CommandContext;
 use anyhow::Context;
 
-use crate::cli::parser::Args;
-
-pub fn registry_edit(args: &Args) -> anyhow::Result<()> {
-    if let Some(config_path) = &args.registry {
+pub fn registry_edit(context: CommandContext) -> anyhow::Result<()> {
+    if let Some(config_path) = &context.global.registry {
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
 
         std::process::Command::new(editor)
