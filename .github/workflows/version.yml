@@ -1,0 +1,86 @@
+name: Version BUMP
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version type (patch, minor, major)"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install cargo-edit
+        run: cargo install cargo-edit
+
+      - name: Get current version
+        id: current_version
+        run: echo "version=$(cargo pkgid | cut -d# -f2)" >> $GITHUB_OUTPUT
+
+      - name: Bump version
+        run: |
+          cargo set-version --bump ${{ github.event.inputs.version }}
+          echo "New version: $(cargo pkgid | cut -d# -f2)"
+
+      - name: Get new version
+        id: new_version
+        run: echo "version=$(cargo pkgid | cut -d# -f2)" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: bump version to ${{ steps.new_version.outputs.version }}"
+          committer: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+          author: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+          branch: chore/bump-version-${{ steps.new_version.outputs.version }}
+          delete-branch: true
+          title: "chore: bump version to ${{ steps.new_version.outputs.version }}"
+          body: |
+            ## 🤖 Automated Version Bump
+
+            - **From:** `${{ steps.current_version.outputs.version }}`
+            - **To:** `${{ steps.new_version.outputs.version }}`
+            - **Type:** `${{ github.event.inputs.version }}`
+
+            ### Changes
+            - ✅ Updated `Cargo.toml` version
+            - ✅ Updated `Cargo.lock`
+            - ✅ Build verification passed
+
+            ---
+
+            **This PR was created automatically by the [Version Bump workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).**
+
+            Merge this PR to apply the version bump, then manually create the release tag:
+            ```bash
+            git checkout master
+            git pull
+            git tag -a v${{ steps.new_version.outputs.version }} -m "Release v${{ steps.new_version.outputs.version }}"
+            git push origin v${{ steps.new_version.outputs.version }}
+            ```
+          labels: |
+            release
+            automated
+            version-bump

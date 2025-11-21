@@ -1,0 +1,56 @@
+name: Auto Tag on Version Bump Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+
+jobs:
+  create-tag:
+    if: |
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'version-bump')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get version from Cargo.toml
+        id: version
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Comment on PR
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            🎉 **Version bump merged successfully!**
+
+            Tag `v${{ steps.version.outputs.version }}` has been created automatically.
+
+            🚀 Release workflow will start shortly: [${{ github.server_url }}/${{ github.repository }}/actions](https://github.com/${{ github.repository }}/actions)
