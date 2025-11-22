@@ -3,10 +3,8 @@ use crate::{
     define_hook, log_info,
 };
 use anyhow::Context;
-use std::path::PathBuf;
 
 define_hook!(BackupHook {
-    source: String,
     destination: String,
     replicas: u32,
 });
@@ -25,16 +23,12 @@ impl Hook for BackupHook {
     }
 
     fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext> {
-        let ctx = HookContext::new(PathBuf::new(), &ctx.rclone_path, &ctx.remote_config);
-
-        log_info!("context: {:?} | Self: {:?}", ctx, self);
-
         Ok(ctx)
     }
 }
 
 impl BackupHookConfig {
-    pub fn build(exec_type: HookExecType, source: &str) -> anyhow::Result<HookConfig> {
+    pub fn build(exec_type: HookExecType) -> anyhow::Result<HookConfig> {
         log_info!("configuring {} for {}", Hooks::Backup, exec_type);
 
         let destination = inquire::Text::new("Remote backup destination:")
@@ -50,7 +44,6 @@ impl BackupHookConfig {
 
         Ok(HookConfig::Backup(Self {
             exec: exec_type,
-            source: source.to_string(),
             destination,
             replicas,
         }))

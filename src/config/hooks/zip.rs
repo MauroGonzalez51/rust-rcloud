@@ -4,7 +4,6 @@ use inquire::Text;
 use std::{fs, io::Write, path::Path};
 
 define_hook!(ZipHook {
-    source: String,
     level: Option<i64>,
     exclude: Option<Vec<String>>,
 });
@@ -82,7 +81,7 @@ impl ZipHook {
         let file_content =
             fs::read(path).with_context(|| format!("failed to read file: {:?}", path))?;
 
-        let file_name = Path::new(&self.source)
+        let file_name = path
             .file_name()
             .or_else(|| path.file_name())
             .map(|n| n.to_string_lossy())
@@ -189,14 +188,18 @@ impl Hook for ZipHook {
                         .context("failed to copy contents")?;
                 }
 
-                Ok(HookContext::new(temp_dir.keep(), &ctx.rclone_path, &ctx.remote_config))
+                Ok(HookContext::new(
+                    temp_dir.keep(),
+                    &ctx.rclone_path,
+                    &ctx.remote_config,
+                ))
             }
         }
     }
 }
 
 impl ZipHookConfig {
-    pub fn build(exec_type: HookExecType, source: &str) -> anyhow::Result<HookConfig> {
+    pub fn build(exec_type: HookExecType) -> anyhow::Result<HookConfig> {
         log_info!("configuring {} for {}", Hooks::Zip, exec_type);
 
         match exec_type {
@@ -222,14 +225,12 @@ impl ZipHookConfig {
 
                 Ok(HookConfig::Zip(Self {
                     exec: HookExecType::Push,
-                    source: source.to_string(),
                     level: Some(level),
                     exclude,
                 }))
             }
             HookExecType::Pull => Ok(HookConfig::Zip(Self {
                 exec: HookExecType::Pull,
-                source: source.to_string(),
                 level: None,
                 exclude: None,
             })),

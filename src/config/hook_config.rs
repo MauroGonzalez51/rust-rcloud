@@ -95,25 +95,14 @@ impl std::fmt::Display for HookConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             HookConfig::Zip(cfg) => {
-                write!(f, "Zip(level: {:?}, source: {})", cfg.level, cfg.source)
+                write!(f, "Zip(level: {:?})", cfg.level)
             }
-            HookConfig::Backup(cfg) => write!(
-                f,
-                "Backup(source: {}, destination: {})",
-                cfg.source, cfg.destination
-            ),
+            HookConfig::Backup(cfg) => write!(f, "Backup(destination: {})", cfg.destination),
         }
     }
 }
 
 impl HookConfig {
-    pub fn source(&self) -> &String {
-        match self {
-            HookConfig::Zip(cfg) => &cfg.source,
-            HookConfig::Backup(cfg) => &cfg.source,
-        }
-    }
-
     pub fn exec_type(&self) -> &HookExecType {
         match self {
             HookConfig::Zip(cfg) => &cfg.exec,

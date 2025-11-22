@@ -53,15 +53,24 @@ pub fn push(
             .unwrap_or("archive"),
     );
 
+    if !context.path.exists() {
+        anyhow::bail!("processed file does not exists: {:?}", context.path);
+    }
+
     log_debug!("final_name: {:?}", final_name);
 
-    let final_path = match hooks.is_empty() {
-        true => context.path.clone(),
+    let final_path = match PathBuf::from(&path_config.local_path) == context.path {
+        true => {
+            log_debug!("path unchanged, using original");
+            PathBuf::from(&path_config.local_path)
+        }
         false => {
+            log_debug!("path changed by hooks, renaming to final_name");
+
             let renamed_path = context
                 .path
                 .parent()
-                .context("failed to get parent path")?
+                .with_context(|| format!("failed to get parent path for: {:?}", context.path))?
                 .join(&final_name);
 
             if context.path.is_file() {
