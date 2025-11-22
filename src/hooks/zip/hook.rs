@@ -1,103 +1,10 @@
 use crate::{config::prelude::*, define_hook, log_info, utils::file::TempFileWriter, utils::hash};
 use anyhow::{Context, bail};
-use inquire::Text;
-use std::{fs, io::Write, path::Path};
 
 define_hook!(ZipHook {
     level: Option<i64>,
     exclude: Option<Vec<String>>,
 });
-
-impl ZipHook {
-    fn build_exclude_set(&self) -> anyhow::Result<Option<globset::GlobSet>> {
-        match &self.exclude {
-            Some(patterns) if !patterns.is_empty() => {
-                let mut builder = globset::GlobSetBuilder::new();
-
-                for pattern in patterns {
-                    builder.add(
-                        globset::Glob::new(pattern)
-                            .with_context(|| format!("invalid glob pattern: {}", pattern))?,
-                    );
-                }
-
-                Ok(Some(builder.build().context("failed to build glob set")?))
-            }
-            _ => Ok(None),
-        }
-    }
-
-    fn process_directory(
-        &self,
-        path: &Path,
-        zip: &mut zip::ZipWriter<std::io::Cursor<&mut Vec<u8>>>,
-        options: zip::write::FileOptions<'_, ()>,
-        exclude_set: Option<&globset::GlobSet>,
-    ) -> anyhow::Result<()> {
-        for entry in walkdir::WalkDir::new(path)
-            .into_iter()
-            .filter_map(Result::ok)
-            .filter(|e| e.file_type().is_file())
-        {
-            let relative_path = entry
-                .path()
-                .strip_prefix(path)
-                .context("failed to build relative path")?;
-
-            if let Some(set) = exclude_set {
-                if set.is_match(relative_path) {
-                    log_info!("excluding: {:?}", relative_path);
-                    continue;
-                }
-            }
-
-            let file_content = fs::read(entry.path())
-                .with_context(|| format!("failed to read file: {:?}", entry.path()))?;
-
-            let zip_path = relative_path
-                .components()
-                .filter_map(|c| c.as_os_str().to_str())
-                .collect::<Vec<_>>()
-                .join("/");
-
-            zip.start_file(&zip_path, options)
-                .with_context(|| format!("failed to add file to zip: {}", zip_path))?;
-
-            zip.write_all(&file_content)
-                .context("failed to write file to zip")?;
-
-            log_info!("added: {} ({} bytes)", zip_path, file_content.len());
-        }
-
-        Ok(())
-    }
-
-    fn process_file(
-        &self,
-        path: &Path,
-        zip: &mut zip::ZipWriter<std::io::Cursor<&mut Vec<u8>>>,
-        options: zip::write::FileOptions<'_, ()>,
-    ) -> anyhow::Result<()> {
-        let file_content =
-            fs::read(path).with_context(|| format!("failed to read file: {:?}", path))?;
-
-        let file_name = path
-            .file_name()
-            .or_else(|| path.file_name())
-            .map(|n| n.to_string_lossy())
-            .ok_or_else(|| anyhow::anyhow!("failed to determine file name"))?;
-
-        zip.start_file(&file_name, options)
-            .context("failed to start file in zip")?;
-
-        zip.write_all(&file_content)
-            .context("failed to write file to zip")?;
-
-        log_info!("added: {:?} ({} bytes)", file_name, file_content.len());
-
-        Ok(())
-    }
-}
 
 impl Hook for ZipHook {
     fn name(&self) -> &'static str {
@@ -194,46 +101,6 @@ impl Hook for ZipHook {
                     &ctx.remote_config,
                 ))
             }
-        }
-    }
-}
-
-impl ZipHookConfig {
-    pub fn build(exec_type: HookExecType) -> anyhow::Result<HookConfig> {
-        log_info!("configuring {} for {}", Hooks::Zip, exec_type);
-
-        match exec_type {
-            HookExecType::Push => {
-                let level = Text::new("Compression level (0-9):")
-                    .with_default("9")
-                    .prompt()
-                    .context("failed to get compression level")?
-                    .parse::<i64>()
-                    .context("failed to parse compresion level")?;
-
-                let exclude = Text::new("Exclude patterns: ")
-                    .with_help_message("comma-separated, glob only, optional")
-                    .prompt_skippable()
-                    .context("failed to get exclude patterns")?;
-
-                let exclude = exclude.map(|s| {
-                    s.split(',')
-                        .map(|p| p.trim().to_string())
-                        .filter(|p| !p.is_empty())
-                        .collect()
-                });
-
-                Ok(HookConfig::Zip(Self {
-                    exec: HookExecType::Push,
-                    level: Some(level),
-                    exclude,
-                }))
-            }
-            HookExecType::Pull => Ok(HookConfig::Zip(Self {
-                exec: HookExecType::Pull,
-                level: None,
-                exclude: None,
-            })),
         }
     }
 }
