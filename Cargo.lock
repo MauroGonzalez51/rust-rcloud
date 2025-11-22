@@ -1040,6 +1040,7 @@ dependencies = [
  "lazy_static",
  "paste",
  "predicates",
+ "regex",
  "serde",
  "serde_json",
  "sha2",

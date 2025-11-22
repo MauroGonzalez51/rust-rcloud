@@ -44,12 +44,19 @@ impl std::fmt::Display for HookExecType {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum HookContextMetadata {
+    SourceLocalPath,
+    SourceRemotePath,
+    ZipChecksum,
+}
+
 #[derive(Debug, Clone)]
 pub struct HookContext {
     pub path: PathBuf,
     pub rclone_path: String,
     pub remote_config: Remote,
-    pub metadata: std::collections::HashMap<String, String>,
+    pub metadata: std::collections::HashMap<HookContextMetadata, String>,
 }
 
 impl HookContext {
@@ -62,8 +69,8 @@ impl HookContext {
         }
     }
 
-    pub fn with_metadata(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.metadata.insert(key.into(), value.into());
+    pub fn with_metadata(mut self, key: HookContextMetadata, value: impl Into<String>) -> Self {
+        self.metadata.insert(key, value.into());
         self
     }
 
@@ -94,12 +101,19 @@ impl std::fmt::Display for HookConfig {
             HookConfig::Zip(cfg) => {
                 write!(f, "Zip(level: {:?})", cfg.level)
             }
-            HookConfig::Backup(cfg) => write!(f, "Backup(destination: {})", cfg.destination),
+            HookConfig::Backup(cfg) => write!(f, "Backup(replicas: {})", cfg.replicas),
         }
     }
 }
 
 impl HookConfig {
+    pub fn modifies_filename(&self) -> bool {
+        match self.hook_type() {
+            Hooks::Zip => true,
+            Hooks::Backup => false,
+        }
+    }
+
     pub fn exec_type(&self) -> &HookExecType {
         match self {
             HookConfig::Zip(cfg) => &cfg.exec,

@@ -25,18 +25,18 @@ pub fn push(
 
     log_debug!("calculated hash: {}", processed_hash);
 
-    match utils::options::force(&HookExecType::Push, force, path_config, &processed_hash) {
-        utils::options::ForceResult::Proceed => {}
-        utils::options::ForceResult::HashMatch => {
+    match utils::force(&HookExecType::Push, force, path_config, &processed_hash) {
+        utils::ForceResult::Proceed => {}
+        utils::ForceResult::HashMatch => {
             log_warn!("content unchanged (hash match). skipping");
             return Ok(());
         }
-        utils::options::ForceResult::PathNotFound => {
+        utils::ForceResult::PathNotFound => {
             unreachable!();
         }
     }
 
-    let context = utils::execute_hooks::execute_hooks(
+    let context = utils::execute_hooks(
         HookContext::new(
             PathBuf::from(&path_config.local_path),
             rclone_path,
@@ -45,7 +45,7 @@ pub fn push(
         hooks,
     )?;
 
-    let final_name = utils::compute_remote_filename::compute_remote_filename(
+    let final_name = utils::compute_remote_filename(
         hooks,
         std::path::Path::new(&path_config.remote_path)
             .file_name()
@@ -97,7 +97,7 @@ pub fn push(
 
     log_debug!("final_path: {:?}", final_path);
 
-    let status = utils::execute_rclone::execute_rclone(
+    let status = utils::execute_rclone(
         rclone_path,
         final_path
             .to_str()

@@ -1,4 +1,9 @@
-use crate::{config::prelude::*, define_hook, log_info, utils::file::TempFileWriter, utils::hash};
+use crate::{
+    config::prelude::{Hook, HookContext, HookContextMetadata, HookExecType, Hooks},
+    define_hook, log_info,
+    utils::file::TempFileWriter,
+    utils::hash,
+};
 use anyhow::{Context, bail};
 
 define_hook!(ZipHook {
@@ -64,7 +69,7 @@ impl Hook for ZipHook {
 
                 Ok(
                     HookContext::new(file_path, &ctx.rclone_path, &ctx.remote_config)
-                        .with_metadata("zip_checksum", checksum),
+                        .with_metadata(HookContextMetadata::ZipChecksum, checksum),
                 )
             }
 
