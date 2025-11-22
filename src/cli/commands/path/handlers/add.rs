@@ -1,6 +1,7 @@
 use crate::{
     cli::{commands::path::utils::path, context::CommandContext},
     config::prelude::*,
+    hooks::prelude::HookBuilder,
     log_debug, log_warn,
 };
 use anyhow::Context;

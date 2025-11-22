@@ -1,9 +1,6 @@
-use crate::config::{
-    hooks::{
-        backup::{BackupHook, BackupHookConfig},
-        zip::{ZipHook, ZipHookConfig},
-    },
-    prelude::Remote,
+use crate::{
+    config::prelude::Remote,
+    hooks::prelude::{BackupHook, BackupHookConfig, ZipHook, ZipHookConfig},
 };
 use clap::ValueEnum;
 use inquire_derive::Selectable;

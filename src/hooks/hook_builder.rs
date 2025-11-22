@@ -1,8 +1,6 @@
 use crate::{
-    config::{
-        hooks::{backup::BackupHookConfig, zip::ZipHookConfig},
-        prelude::*,
-    },
+    config::prelude::*,
+    hooks::{backup::hook::BackupHookConfig, zip::hook::ZipHookConfig},
     log_debug,
 };
 use anyhow::Context;
