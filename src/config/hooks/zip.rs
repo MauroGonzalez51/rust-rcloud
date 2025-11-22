@@ -156,7 +156,10 @@ impl Hook for ZipHook {
                     .write_temp()
                     .context("failed to write temp file")?;
 
-                Ok(HookContext::new(file_path).with_metadata("zip_checksum", checksum))
+                Ok(
+                    HookContext::new(file_path, &ctx.rclone_path, &ctx.remote_config)
+                        .with_metadata("zip_checksum", checksum),
+                )
             }
 
             HookExecType::Pull => {
@@ -186,7 +189,7 @@ impl Hook for ZipHook {
                         .context("failed to copy contents")?;
                 }
 
-                Ok(HookContext::new(temp_dir.keep()))
+                Ok(HookContext::new(temp_dir.keep(), &ctx.rclone_path, &ctx.remote_config))
             }
         }
     }

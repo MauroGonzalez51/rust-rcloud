@@ -1,6 +1,9 @@
-use crate::config::hooks::{
-    backup::{BackupHook, BackupHookConfig},
-    zip::{ZipHook, ZipHookConfig},
+use crate::config::{
+    hooks::{
+        backup::{BackupHook, BackupHookConfig},
+        zip::{ZipHook, ZipHookConfig},
+    },
+    prelude::Remote,
 };
 use clap::ValueEnum;
 use inquire_derive::Selectable;
@@ -47,14 +50,18 @@ impl std::fmt::Display for HookExecType {
 #[derive(Debug, Clone)]
 pub struct HookContext {
     pub path: PathBuf,
+    pub rclone_path: String,
+    pub remote_config: Remote,
     pub metadata: std::collections::HashMap<String, String>,
 }
 
 impl HookContext {
-    pub fn new(path: PathBuf) -> Self {
+    pub fn new(path: PathBuf, rclone_path: &str, remote_config: &Remote) -> Self {
         Self {
             path,
             metadata: std::collections::HashMap::new(),
+            rclone_path: rclone_path.to_string(),
+            remote_config: remote_config.clone(),
         }
     }
 

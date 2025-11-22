@@ -71,8 +71,10 @@ pub fn pull(
     };
 
     let reversed_hooks: Vec<HookConfig> = hooks.iter().rev().cloned().collect();
-    let context =
-        utils::execute_hooks::execute_hooks(HookContext::new(downloaded_file), &reversed_hooks)?;
+    let context = utils::execute_hooks::execute_hooks(
+        HookContext::new(downloaded_file, rclone_path, remote_config),
+        &reversed_hooks,
+    )?;
 
     let processed_hash = hash::Hash::hash_path(&context.path)
         .context("failed to calculate processed content hash")?;

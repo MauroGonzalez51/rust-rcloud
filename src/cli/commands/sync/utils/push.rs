@@ -37,7 +37,11 @@ pub fn push(
     }
 
     let context = utils::execute_hooks::execute_hooks(
-        HookContext::new(PathBuf::from(&path_config.local_path)),
+        HookContext::new(
+            PathBuf::from(&path_config.local_path),
+            rclone_path,
+            remote_config,
+        ),
         hooks,
     )?;
 
