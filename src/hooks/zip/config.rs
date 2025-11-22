@@ -1,6 +1,6 @@
 use crate::{
     config::prelude::{HookConfig, HookExecType, Hooks},
-    hooks::zip::hook::ZipHookConfig,
+    hooks::zip::ZipHookConfig,
     log_info,
 };
 use anyhow::Context;

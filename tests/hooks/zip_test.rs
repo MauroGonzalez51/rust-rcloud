@@ -1,9 +1,14 @@
 use anyhow::Context;
-use rcloud::{
-    Hook, HookContext,
-    config::hooks::zip::{ZipHook, ZipHookConfig},
-};
+use rcloud::{Hook, HookContext, Remote, ZipHook, ZipHookConfig};
 use std::fs;
+
+fn mock_remote() -> Remote {
+    Remote {
+        id: String::new(),
+        remote_name: String::from("drive"),
+        provider: String::from("drive"),
+    }
+}
 
 #[test]
 fn test_zip_single_file() -> anyhow::Result<()> {
@@ -14,13 +19,12 @@ fn test_zip_single_file() -> anyhow::Result<()> {
 
     let config = ZipHookConfig {
         exec: rcloud::HookExecType::Push,
-        source: test_file.display().to_string(),
         level: Some(6),
         exclude: None,
     };
 
     let hook = ZipHook::from(config);
-    let ctx = HookContext::new(test_file);
+    let ctx = HookContext::new(test_file, "", &mock_remote());
     let result = hook.process(ctx).context("failed to process file")?;
 
     assert!(result.path.exists());
@@ -44,13 +48,12 @@ fn test_zip_directory() -> anyhow::Result<()> {
 
     let config = ZipHookConfig {
         exec: rcloud::HookExecType::Push,
-        source: temp_dir.path().display().to_string(),
         level: Some(6),
         exclude: None,
     };
 
     let hook = ZipHook::from(config);
-    let ctx = HookContext::new(temp_dir.path().to_path_buf());
+    let ctx = HookContext::new(temp_dir.path().to_path_buf(), "", &mock_remote());
     let result = hook.process(ctx).context("failed to process directory")?;
 
     assert!(result.path.exists());
@@ -69,13 +72,12 @@ fn test_zip_with_exclusions() -> anyhow::Result<()> {
 
     let config = ZipHookConfig {
         exec: rcloud::HookExecType::Push,
-        source: temp_dir.path().display().to_string(),
         level: Some(6),
         exclude: Some(vec!["*.log".to_string()]),
     };
 
     let hook = ZipHook::from(config);
-    let ctx = HookContext::new(temp_dir.path().to_path_buf());
+    let ctx = HookContext::new(temp_dir.path().to_path_buf(), "", &mock_remote());
     let result = hook.process(ctx).context("failed to process file")?;
 
     assert!(result.path.exists());

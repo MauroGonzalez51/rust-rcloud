@@ -12,7 +12,7 @@ use anyhow::Context;
 /// An `anyhow::Result<std::process::ExitStatus>` representing the result of the rclone process execution.
 ///
 /// # Example
-/// ```rust,ignore
+/// ```rust, ignore
 /// let status = execute_rclone(
 ///     "rclone",
 ///     "/path/to/source",

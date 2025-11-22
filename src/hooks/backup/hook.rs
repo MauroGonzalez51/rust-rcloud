@@ -1,8 +1,7 @@
 use crate::{
-    config::prelude::{Hook, HookConfig, HookContext, HookExecType, Hooks},
-    define_hook, log_info,
+    config::prelude::{Hook, HookContext, HookExecType, Hooks},
+    define_hook,
 };
-use anyhow::Context;
 use inquire_derive::Selectable;
 use serde::{Deserialize, Serialize};
 
@@ -27,8 +26,6 @@ define_hook!(BackupHook {
     replicas: u32,
 });
 
-impl BackupHook {}
-
 impl Hook for BackupHook {
     fn name(&self) -> &'static str {
         "backup"
@@ -42,33 +39,5 @@ impl Hook for BackupHook {
 
     fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext> {
         Ok(ctx)
-    }
-}
-
-impl BackupHookConfig {
-    pub fn build(exec_type: HookExecType) -> anyhow::Result<HookConfig> {
-        log_info!("configuring {} for {}", Hooks::Backup, exec_type);
-
-        let destination = inquire::Text::new("Remote backup destination:")
-            .prompt()
-            .context("invalid destination")?;
-
-        let replicas = inquire::Text::new("Max replicas:")
-            .with_default("1")
-            .prompt()
-            .context("invalid replicas")?
-            .parse::<u32>()
-            .context("not a number")?;
-
-        let types = BackupType::multi_select("Select backup type(s):")
-            .prompt()
-            .context("failed to select backup types")?;
-
-        Ok(HookConfig::Backup(Self {
-            exec: exec_type,
-            types,
-            destination,
-            replicas,
-        }))
     }
 }

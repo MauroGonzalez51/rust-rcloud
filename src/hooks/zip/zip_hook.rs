@@ -1,4 +1,4 @@
-use crate::{hooks::zip::hook::ZipHook, log_info};
+use crate::{hooks::zip::ZipHook, log_info};
 use anyhow::Context;
 use std::{fs, io::Write, path::Path};
 

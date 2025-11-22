@@ -13,7 +13,7 @@ use crate::{
 /// An `anyhow::Result<HookContext>` containing the processed context after all hooks have been applied.
 ///
 /// # Example
-/// ```rust,ignore
+/// ```rust, ignore
 /// let context = HookContext::new(some_path);
 /// let hooks = vec![HookConfig::Zip(/* ... */)];
 /// let result = execute_hooks(context, &hooks)?;
