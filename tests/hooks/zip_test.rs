@@ -1,5 +1,5 @@
 use anyhow::Context;
-use rcloud::{Hook, HookContext, Remote, ZipHook, ZipHookConfig};
+use rcloud::{Hook, HookContext, HookContextMetadata, Remote, ZipHook, ZipHookConfig};
 use std::fs;
 
 fn mock_remote() -> Remote {
@@ -28,7 +28,11 @@ fn test_zip_single_file() -> anyhow::Result<()> {
     let result = hook.process(ctx).context("failed to process file")?;
 
     assert!(result.path.exists());
-    assert!(result.metadata.contains_key("zip_checksum"));
+    assert!(
+        result
+            .metadata
+            .contains_key(&HookContextMetadata::ZipChecksum)
+    );
 
     Ok(())
 }
