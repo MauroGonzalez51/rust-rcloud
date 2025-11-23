@@ -5,7 +5,7 @@ license = "MIT"
 description = "CLI wrapper for rclone"
 homepage = "https://github.com/MauroGonzalez51/rust-rcloud"
 repository = "https://github.com/MauroGonzalez51/rust-rcloud"
-version = "0.2.7"
+version = "0.3.0"
 edition = "2024"
 
 [package.metadata.wix]
