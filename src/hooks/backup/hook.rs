@@ -1,5 +1,5 @@
 use crate::{
-    config::prelude::{Hook, HookContext, HookContextMetadata, HookExecType, Hooks},
+    config::prelude::{Hook, HookContext, HookExecType, Hooks},
     define_hook, log_info,
 };
 use inquire_derive::Selectable;
@@ -42,45 +42,37 @@ impl Hook for BackupHook {
 
     fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext> {
         for backup_type in &self.types {
+            log_info!("executing backup {} in {}", backup_type, self.exec);
+
             match (backup_type, &self.exec) {
                 (BackupType::Local, HookExecType::Push) => {
-                    log_info!(
-                        "executing backup {} in {}",
-                        BackupType::Local,
-                        HookExecType::Push
-                    );
-
                     self.backup_local(&ctx)?;
                 }
                 (BackupType::Local, HookExecType::Pull) => {
-                    log_info!(
-                        "executing backup {} in {}",
-                        BackupType::Local,
-                        HookExecType::Pull
-                    );
+                    let local_path = std::path::PathBuf::from(&ctx.path_config.local_path);
 
-                    if let Some(local_path) =
-                        ctx.metadata.get(&HookContextMetadata::SourceLocalPath)
-                    {
-                        let local_path = std::path::PathBuf::from(local_path);
+                    if !local_path.exists() {
+                        log_info!(
+                            "local path does not exist, skipping backup: {:?}",
+                            local_path
+                        );
 
-                        if !local_path.exists() {
-                            log_info!(
-                                "local path does not exists, skipping backup: {:?}",
-                                local_path
-                            );
-
-                            continue;
-                        }
-
-                        let local_ctx =
-                            HookContext::new(local_path, &ctx.rclone_path, &ctx.remote_config);
-
-                        self.backup_local(&local_ctx)?;
+                        continue;
                     }
+
+                    self.backup_local(&HookContext::new(
+                        local_path,
+                        &ctx.rclone_path,
+                        &ctx.remote_config,
+                        &ctx.path_config,
+                    ))?;
                 }
-                (BackupType::Remote, HookExecType::Push) => todo!(),
-                (BackupType::Remote, HookExecType::Pull) => todo!(),
+                (BackupType::Remote, HookExecType::Push) => {
+                    self.backup_remote(&ctx)?;
+                }
+                (BackupType::Remote, HookExecType::Pull) => {
+                    self.backup_remote(&ctx)?;
+                }
             }
         }
 

@@ -1,11 +1,16 @@
-use crate::hooks::backup::{backup_hook::BackupHookReplica, utils};
+use crate::{
+    hooks::backup::{backup_hook::BackupHookReplica, utils},
+    log_debug,
+};
 use anyhow::Context;
 
-pub fn get_local_replicas(local_path: Option<&str>) -> anyhow::Result<Vec<BackupHookReplica>> {
-    let directory = std::path::Path::new(local_path.expect("local path must be declared"));
+pub fn get_local_replicas(local_path: &str) -> anyhow::Result<Vec<BackupHookReplica>> {
+    let directory = std::path::Path::new(local_path);
 
     let mut replicas = Vec::new();
     let re = regex::Regex::new(r"^(\d+)\.(\d+)$").context("failed to create regex")?;
+
+    log_debug!("local replicas found: {:?}", replicas);
 
     if directory.exists() && directory.is_dir() {
         for entry in std::fs::read_dir(directory)

@@ -35,15 +35,10 @@ pub fn pull(
     let remote_path = match &remote_filename {
         None => format!("{}:{}", remote_config.remote_name, path_config.remote_path),
         Some(filename) => {
-            let parent_path = std::path::Path::new(&path_config.remote_path)
-                .parent()
-                .and_then(|p| p.to_str())
-                .filter(|s| !s.is_empty());
-
-            match parent_path {
-                Some(parent) => format!("{}:{}/{}", remote_config.remote_name, parent, filename),
-                None => format!("{}:{}", remote_config.remote_name, filename),
-            }
+            format!(
+                "{}:{}/{}",
+                remote_config.remote_name, path_config.remote_path, filename
+            )
         }
     };
 
@@ -88,7 +83,7 @@ pub fn pull(
 
     let reversed_hooks: Vec<HookConfig> = hooks.iter().rev().cloned().collect();
     let context = utils::execute_hooks(
-        HookContext::new(downloaded_file, rclone_path, remote_config)
+        HookContext::new(downloaded_file, rclone_path, remote_config, path_config)
             .with_metadata(
                 HookContextMetadata::SourceLocalPath,
                 &path_config.local_path,

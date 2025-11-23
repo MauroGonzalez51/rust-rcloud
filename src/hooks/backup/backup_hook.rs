@@ -13,23 +13,47 @@ pub struct BackupHookReplica {
 
 impl BackupHook {
     pub fn backup_local(&self, ctx: &HookContext) -> anyhow::Result<()> {
-        if self.local_path.is_none() {
-            anyhow::bail!("local path must be declared in order to perform a local backup");
-        }
+        let local_path = self
+            .local_path
+            .as_deref()
+            .context("remote path must be declared in order to perform a remote backup")?;
 
-        let mut local_replicas = utils::get_local_replicas(self.local_path.as_deref())
-            .context("failed to get local replicas")?;
+        let mut replicas =
+            utils::get_local_replicas(local_path).context("failed to get local replicas")?;
 
-        utils::rotate_local_replicas(&mut local_replicas, self.replicas as usize)
+        utils::rotate_local_replicas(&mut replicas, self.replicas as usize)
             .context("failed to rotate local replicas")?;
 
-        let next_replica_number = local_replicas
-            .first()
-            .map(|r| r.replica_number + 1)
-            .unwrap_or(1);
+        let next_replica = replicas.first().map(|r| r.replica_number + 1).unwrap_or(1);
 
-        utils::create_local_backup(ctx, self.local_path.as_deref(), next_replica_number)
+        utils::create_local_backup(ctx, local_path, next_replica)
             .context("failed to create local backup")?;
+
+        Ok(())
+    }
+
+    pub fn backup_remote(&self, ctx: &HookContext) -> anyhow::Result<()> {
+        let remote_path = self
+            .remote_path
+            .as_deref()
+            .context("remote path must be declared in order to perform a remote backup")?;
+
+        let mut replicas =
+            utils::get_remote_replicas(remote_path, &ctx.rclone_path, &ctx.remote_config)
+                .context("failed to get remote replicas")?;
+
+        utils::rotate_remote_replicas(
+            &mut replicas,
+            self.replicas as usize,
+            &ctx.rclone_path,
+            &ctx.remote_config,
+        )
+        .context("failed to rotate remote replicas")?;
+
+        let next_replica = replicas.first().map(|r| r.replica_number + 1).unwrap_or(1);
+
+        utils::create_remote_backup(ctx, remote_path, next_replica)
+            .context("failed to create remote backup")?;
 
         Ok(())
     }

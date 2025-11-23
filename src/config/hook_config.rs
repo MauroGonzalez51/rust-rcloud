@@ -1,5 +1,5 @@
 use crate::{
-    config::prelude::Remote,
+    config::prelude::{PathConfig, Remote},
     hooks::prelude::{BackupHook, BackupHookConfig, ZipHook, ZipHookConfig},
 };
 use clap::ValueEnum;
@@ -56,16 +56,23 @@ pub struct HookContext {
     pub path: PathBuf,
     pub rclone_path: String,
     pub remote_config: Remote,
+    pub path_config: PathConfig,
     pub metadata: std::collections::HashMap<HookContextMetadata, String>,
 }
 
 impl HookContext {
-    pub fn new(path: PathBuf, rclone_path: &str, remote_config: &Remote) -> Self {
+    pub fn new(
+        path: PathBuf,
+        rclone_path: &str,
+        remote_config: &Remote,
+        path_config: &PathConfig,
+    ) -> Self {
         Self {
             path,
             metadata: std::collections::HashMap::new(),
             rclone_path: rclone_path.to_string(),
             remote_config: remote_config.clone(),
+            path_config: path_config.clone(),
         }
     }
 

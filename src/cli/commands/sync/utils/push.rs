@@ -41,6 +41,7 @@ pub fn push(
             PathBuf::from(&path_config.local_path),
             rclone_path,
             remote_config,
+            path_config,
         ),
         hooks,
     )?;

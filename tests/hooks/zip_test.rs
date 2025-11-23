@@ -1,5 +1,8 @@
 use anyhow::Context;
-use rcloud::{Hook, HookContext, HookContextMetadata, Remote, ZipHook, ZipHookConfig};
+use rcloud::{
+    Hook, HookContext, HookContextMetadata, PathConfig, PathConfigHooks, Remote, ZipHook,
+    ZipHookConfig,
+};
 use std::fs;
 
 fn mock_remote() -> Remote {
@@ -7,6 +10,21 @@ fn mock_remote() -> Remote {
         id: String::new(),
         remote_name: String::from("drive"),
         provider: String::from("drive"),
+    }
+}
+
+fn mock_path() -> PathConfig {
+    PathConfig {
+        id: String::new(),
+        remote_id: String::new(),
+        local_path: String::new(),
+        remote_path: String::new(),
+        hash: None,
+        tags: vec![],
+        hooks: PathConfigHooks {
+            push: vec![],
+            pull: vec![],
+        },
     }
 }
 
@@ -24,7 +42,7 @@ fn test_zip_single_file() -> anyhow::Result<()> {
     };
 
     let hook = ZipHook::from(config);
-    let ctx = HookContext::new(test_file, "", &mock_remote());
+    let ctx = HookContext::new(test_file, "", &mock_remote(), &mock_path());
     let result = hook.process(ctx).context("failed to process file")?;
 
     assert!(result.path.exists());
@@ -57,7 +75,12 @@ fn test_zip_directory() -> anyhow::Result<()> {
     };
 
     let hook = ZipHook::from(config);
-    let ctx = HookContext::new(temp_dir.path().to_path_buf(), "", &mock_remote());
+    let ctx = HookContext::new(
+        temp_dir.path().to_path_buf(),
+        "",
+        &mock_remote(),
+        &mock_path(),
+    );
     let result = hook.process(ctx).context("failed to process directory")?;
 
     assert!(result.path.exists());
@@ -81,7 +104,12 @@ fn test_zip_with_exclusions() -> anyhow::Result<()> {
     };
 
     let hook = ZipHook::from(config);
-    let ctx = HookContext::new(temp_dir.path().to_path_buf(), "", &mock_remote());
+    let ctx = HookContext::new(
+        temp_dir.path().to_path_buf(),
+        "",
+        &mock_remote(),
+        &mock_path(),
+    );
     let result = hook.process(ctx).context("failed to process file")?;
 
     assert!(result.path.exists());

@@ -1,12 +1,12 @@
-use crate::config::prelude::HookContext;
+use crate::{config::prelude::HookContext, log_debug};
 use anyhow::Context;
 
 pub fn create_local_backup(
     ctx: &HookContext,
-    local_path: Option<&str>,
+    local_path: &str,
     replica_number: u32,
 ) -> anyhow::Result<()> {
-    let directory = std::path::Path::new(local_path.expect("local path must be declared"));
+    let directory = std::path::Path::new(local_path);
 
     if !directory.exists() {
         std::fs::create_dir_all(directory)
@@ -19,6 +19,8 @@ pub fn create_local_backup(
         .as_secs();
 
     let backup_path = directory.join(format!("{}.{}", timestamp, replica_number));
+
+    log_debug!("writing files to backup path: {:?}", backup_path);
 
     if ctx.path.is_file() {
         std::fs::copy(&ctx.path, &backup_path)
