@@ -53,10 +53,10 @@ pub fn sync_single(
 
     let hooks = &path_config.hooks;
 
-    utils::options::clean(direction, context.local.clean, &path_config.local_path)?;
+    utils::clean(direction, context.local.clean, &path_config.local_path)?;
 
     match direction {
-        HookExecType::Push => utils::push::push(
+        HookExecType::Push => utils::push(
             &mut context.registry,
             &context.global.rclone,
             &remote_config,
@@ -65,7 +65,7 @@ pub fn sync_single(
             context.local.force,
         )?,
 
-        HookExecType::Pull => utils::pull::pull(
+        HookExecType::Pull => utils::pull(
             &mut context.registry,
             &context.global.rclone,
             &remote_config,

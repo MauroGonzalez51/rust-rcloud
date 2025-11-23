@@ -1,7 +1,9 @@
 use crate::{
     cli::commands::sync::utils,
     config::{
-        prelude::{HookConfig, HookContext, HookExecType, PathConfig, Registry},
+        prelude::{
+            HookConfig, HookContext, HookContextMetadata, HookExecType, PathConfig, Registry,
+        },
         remote::Remote,
     },
     log_debug, log_info, log_success, log_warn,
@@ -19,29 +21,32 @@ pub fn pull(
 ) -> anyhow::Result<()> {
     let temp_dir = tempfile::tempdir().context("failed to create temp directory")?;
 
-    let remote_filename = utils::compute_remote_filename::compute_remote_filename(
-        hooks,
-        std::path::Path::new(&path_config.remote_path)
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("archive"),
-    );
-
-    log_debug!("remote_filename: {:?}", remote_filename);
-
-    let remote_file_path = match hooks.is_empty() {
-        true => format!("{}:{}", remote_config.remote_name, path_config.remote_path),
-        false => format!(
-            "{}:{}/{}",
-            remote_config.remote_name, path_config.remote_path, remote_filename
-        ),
+    let remote_filename = match hooks.iter().any(|h| h.modifies_filename()) {
+        true => Some(utils::compute_remote_filename(
+            hooks,
+            std::path::Path::new(&path_config.remote_path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("archive"),
+        )),
+        false => None,
     };
 
-    log_debug!("remote_file_path: {:?}", remote_file_path);
+    let remote_path = match &remote_filename {
+        None => format!("{}:{}", remote_config.remote_name, path_config.remote_path),
+        Some(filename) => {
+            format!(
+                "{}:{}/{}",
+                remote_config.remote_name, path_config.remote_path, filename
+            )
+        }
+    };
 
-    let status = utils::execute_rclone::execute_rclone(
+    log_debug!("remote_path: {:?}", remote_path);
+
+    let status = utils::execute_rclone(
         rclone_path,
-        &remote_file_path,
+        &remote_path,
         temp_dir
             .path()
             .to_str()
@@ -55,37 +60,53 @@ pub fn pull(
 
     log_info!("running post-transaction hooks");
 
-    let downloaded_file = match hooks.is_empty() {
-        true => temp_dir.path().to_path_buf(),
-        false => {
-            let remote_filename = utils::compute_remote_filename::compute_remote_filename(
-                hooks,
-                std::path::Path::new(&path_config.remote_path)
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("archive"),
-            );
+    let downloaded_file = match &remote_filename {
+        None => {
+            let entries: Vec<_> = std::fs::read_dir(temp_dir.path())
+                .context("failed to read temp directory")?
+                .filter_map(Result::ok)
+                .collect();
 
-            temp_dir.path().join(remote_filename)
+            match entries.len() {
+                1 => entries[0].path(),
+                _ => temp_dir.path().to_path_buf(),
+            }
         }
+        Some(filename) => temp_dir.path().join(filename),
     };
 
+    log_debug!(
+        "downloaded_file: {:?} (exists: {})",
+        downloaded_file,
+        downloaded_file.exists()
+    );
+
     let reversed_hooks: Vec<HookConfig> = hooks.iter().rev().cloned().collect();
-    let context =
-        utils::execute_hooks::execute_hooks(HookContext::new(downloaded_file), &reversed_hooks)?;
+    let context = utils::execute_hooks(
+        HookContext::new(downloaded_file, rclone_path, remote_config, path_config)
+            .with_metadata(
+                HookContextMetadata::SourceLocalPath,
+                &path_config.local_path,
+            )
+            .with_metadata(
+                HookContextMetadata::SourceRemotePath,
+                &path_config.remote_path,
+            ),
+        &reversed_hooks,
+    )?;
 
     let processed_hash = hash::Hash::hash_path(&context.path)
         .context("failed to calculate processed content hash")?;
 
     log_debug!("processed hash: {}", processed_hash);
 
-    match utils::options::force(&HookExecType::Pull, force, path_config, &processed_hash) {
-        utils::options::ForceResult::Proceed => {}
-        utils::options::ForceResult::HashMatch => {
+    match utils::force(&HookExecType::Pull, force, path_config, &processed_hash) {
+        utils::ForceResult::Proceed => {}
+        utils::ForceResult::HashMatch => {
             log_warn!("content unchanged (hash match). skipping");
             return Ok(());
         }
-        utils::options::ForceResult::PathNotFound => {
+        utils::ForceResult::PathNotFound => {
             log_info!("local path does not exist, proceding with sync");
         }
     }

@@ -1,6 +1,6 @@
 use crate::{
     config::prelude::{HookExecType, PathConfig},
-    log_info, log_warn,
+    log_info,
 };
 use anyhow::{Context, Ok};
 
@@ -74,7 +74,6 @@ pub fn force(
             if !force {
                 if let Some(stored_hash) = &path_config.hash {
                     if stored_hash == processed_hash {
-                        log_warn!("content unchanged (hash match). skipping");
                         return ForceResult::HashMatch;
                     }
                 }

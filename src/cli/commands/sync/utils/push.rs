@@ -25,23 +25,28 @@ pub fn push(
 
     log_debug!("calculated hash: {}", processed_hash);
 
-    match utils::options::force(&HookExecType::Push, force, path_config, &processed_hash) {
-        utils::options::ForceResult::Proceed => {}
-        utils::options::ForceResult::HashMatch => {
+    match utils::force(&HookExecType::Push, force, path_config, &processed_hash) {
+        utils::ForceResult::Proceed => {}
+        utils::ForceResult::HashMatch => {
             log_warn!("content unchanged (hash match). skipping");
             return Ok(());
         }
-        utils::options::ForceResult::PathNotFound => {
+        utils::ForceResult::PathNotFound => {
             unreachable!();
         }
     }
 
-    let context = utils::execute_hooks::execute_hooks(
-        HookContext::new(PathBuf::from(&path_config.local_path)),
+    let context = utils::execute_hooks(
+        HookContext::new(
+            PathBuf::from(&path_config.local_path),
+            rclone_path,
+            remote_config,
+            path_config,
+        ),
         hooks,
     )?;
 
-    let final_name = utils::compute_remote_filename::compute_remote_filename(
+    let final_name = utils::compute_remote_filename(
         hooks,
         std::path::Path::new(&path_config.remote_path)
             .file_name()
@@ -49,15 +54,24 @@ pub fn push(
             .unwrap_or("archive"),
     );
 
+    if !context.path.exists() {
+        anyhow::bail!("processed file does not exists: {:?}", context.path);
+    }
+
     log_debug!("final_name: {:?}", final_name);
 
-    let final_path = match hooks.is_empty() {
-        true => context.path.clone(),
+    let final_path = match PathBuf::from(&path_config.local_path) == context.path {
+        true => {
+            log_debug!("path unchanged, using original");
+            PathBuf::from(&path_config.local_path)
+        }
         false => {
+            log_debug!("path changed by hooks, renaming to final_name");
+
             let renamed_path = context
                 .path
                 .parent()
-                .context("failed to get parent path")?
+                .with_context(|| format!("failed to get parent path for: {:?}", context.path))?
                 .join(&final_name);
 
             if context.path.is_file() {
@@ -84,7 +98,7 @@ pub fn push(
 
     log_debug!("final_path: {:?}", final_path);
 
-    let status = utils::execute_rclone::execute_rclone(
+    let status = utils::execute_rclone(
         rclone_path,
         final_path
             .to_str()

@@ -1,4 +1,4 @@
-use crate::config::prelude::HookConfig;
+use crate::config::prelude::{HookConfig, Hooks};
 
 /// Computes the final remote filename based on the applied hooks.
 ///
@@ -20,9 +20,16 @@ pub fn compute_remote_filename(hooks: &[HookConfig], base_name: &str) -> String 
         return base_name.to_string();
     }
 
-    let last_hook = &hooks[hooks.len() - 1];
+    let last = hooks
+        .iter()
+        .filter(|hook| hook.modifies_filename())
+        .next_back();
 
-    match last_hook {
-        HookConfig::Zip(_) => format!("{}.zip", base_name),
+    match last {
+        Some(hook) => match hook.hook_type() {
+            Hooks::Zip => format!("{}.zip", base_name),
+            _ => base_name.to_string(),
+        },
+        None => base_name.to_string(),
     }
 }

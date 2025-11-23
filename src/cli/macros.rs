@@ -1,7 +1,7 @@
 /// Import handler function only (without LocalArgs)
 ///
 /// # Usage
-/// ```rust
+/// ```rust, ignore
 /// use_handler!(remote, list);
 /// // Expands to: use crate::cli::commands::remote::handlers::list::remote_list;
 /// ```
@@ -17,7 +17,7 @@ macro_rules! use_handler {
 /// Import handler with LocalArgs
 ///
 /// # Usage
-/// ```rust
+/// ```rust, ignore
 /// use_handler_with_args!(remote, add);
 /// // Expands to:
 /// // use crate::cli::commands::remote::handlers::add::{remote_add, LocalArgs as RemoteAddArgs};
@@ -45,7 +45,7 @@ macro_rules! use_handler_with_args {
 /// Import multiple handlers with mixed types
 ///
 /// # Usage
-/// ```rust
+/// ```rust, ignore
 /// use_handlers! {
 ///     // Handlers without LocalArgs
 ///     simple: {
@@ -88,7 +88,7 @@ macro_rules! use_handlers {
 /// Create CommandContext with LocalArgs inline
 ///
 /// # Usage
-/// ```rust
+/// ```rust, ignore
 /// // With LocalArgs - direct field names
 /// let ctx = command_context!(global, registry, RemoteAddArgs { name, provider });
 ///

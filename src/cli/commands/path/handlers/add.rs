@@ -1,6 +1,7 @@
 use crate::{
     cli::{commands::path::utils::path, context::CommandContext},
     config::prelude::*,
+    hooks::prelude::HookBuilder,
     log_debug, log_warn,
 };
 use anyhow::Context;
@@ -77,8 +78,6 @@ pub fn path_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
                             HookBuilder::new()
                                 .with_hook_type(hook_type)
                                 .with_exec_type(exec_type)
-                                .with_paths(local_path.clone(), remote_path.clone())
-                                .with_list(&push_hooks)
                                 .build()
                                 .context("failed to build push hook")?,
                         );
@@ -89,8 +88,6 @@ pub fn path_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
                             HookBuilder::new()
                                 .with_hook_type(hook_type)
                                 .with_exec_type(exec_type)
-                                .with_paths(local_path.clone(), remote_path.clone())
-                                .with_list(&pull_hooks)
                                 .build()
                                 .context("failed to build pull hook")?,
                         );

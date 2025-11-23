@@ -1,4 +1,7 @@
-use crate::config::hooks::zip::{ZipHook, ZipHookConfig};
+use crate::{
+    config::prelude::{PathConfig, Remote},
+    hooks::prelude::{BackupHook, BackupHookConfig, ZipHook, ZipHookConfig},
+};
 use clap::ValueEnum;
 use inquire_derive::Selectable;
 use serde::{Deserialize, Serialize};
@@ -14,12 +17,14 @@ pub trait Hook: std::fmt::Debug + Send + Sync {
 #[derive(Debug, Clone, Copy, Selectable)]
 pub enum Hooks {
     Zip,
+    Backup,
 }
 
 impl std::fmt::Display for Hooks {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Hooks::Zip => write!(f, "Zip Compression"),
+            Hooks::Backup => write!(f, "Backup"),
         }
     }
 }
@@ -39,22 +44,40 @@ impl std::fmt::Display for HookExecType {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum HookContextMetadata {
+    SourceLocalPath,
+    SourceRemotePath,
+    ZipChecksum,
+}
+
 #[derive(Debug, Clone)]
 pub struct HookContext {
     pub path: PathBuf,
-    pub metadata: std::collections::HashMap<String, String>,
+    pub rclone_path: String,
+    pub remote_config: Remote,
+    pub path_config: PathConfig,
+    pub metadata: std::collections::HashMap<HookContextMetadata, String>,
 }
 
 impl HookContext {
-    pub fn new(path: PathBuf) -> Self {
+    pub fn new(
+        path: PathBuf,
+        rclone_path: &str,
+        remote_config: &Remote,
+        path_config: &PathConfig,
+    ) -> Self {
         Self {
             path,
             metadata: std::collections::HashMap::new(),
+            rclone_path: rclone_path.to_string(),
+            remote_config: remote_config.clone(),
+            path_config: path_config.clone(),
         }
     }
 
-    pub fn with_metadata(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.metadata.insert(key.into(), value.into());
+    pub fn with_metadata(mut self, key: HookContextMetadata, value: impl Into<String>) -> Self {
+        self.metadata.insert(key, value.into());
         self
     }
 
@@ -67,12 +90,14 @@ impl HookContext {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HookConfig {
     Zip(ZipHookConfig),
+    Backup(BackupHookConfig),
 }
 
 impl From<HookConfig> for Box<dyn Hook> {
     fn from(val: HookConfig) -> Self {
         match val {
             HookConfig::Zip(cfg) => Box::new(ZipHook::from(cfg)),
+            HookConfig::Backup(cfg) => Box::from(BackupHook::from(cfg)),
         }
     }
 }
@@ -81,28 +106,32 @@ impl std::fmt::Display for HookConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             HookConfig::Zip(cfg) => {
-                write!(f, "Zip(level: {:?}, source: {})", cfg.level, cfg.source)
+                write!(f, "Zip(level: {:?})", cfg.level)
             }
+            HookConfig::Backup(cfg) => write!(f, "Backup(replicas: {})", cfg.replicas),
         }
     }
 }
 
 impl HookConfig {
-    pub fn source(&self) -> &String {
-        match self {
-            HookConfig::Zip(cfg) => &cfg.source,
+    pub fn modifies_filename(&self) -> bool {
+        match self.hook_type() {
+            Hooks::Zip => true,
+            Hooks::Backup => false,
         }
     }
 
     pub fn exec_type(&self) -> &HookExecType {
         match self {
             HookConfig::Zip(cfg) => &cfg.exec,
+            HookConfig::Backup(cfg) => &cfg.exec,
         }
     }
 
     pub fn hook_type(&self) -> &Hooks {
         match self {
             HookConfig::Zip(_) => &Hooks::Zip,
+            HookConfig::Backup(_) => &Hooks::Backup,
         }
     }
 }
