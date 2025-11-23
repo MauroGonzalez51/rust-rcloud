@@ -18,6 +18,7 @@ pub fn pull(
     path_config: &PathConfig,
     hooks: &[HookConfig],
     force: &bool,
+    clean: &bool,
 ) -> anyhow::Result<()> {
     let temp_dir = tempfile::tempdir().context("failed to create temp directory")?;
 
@@ -112,6 +113,8 @@ pub fn pull(
     }
 
     log_info!("moving processed content to local_path");
+
+    utils::clean(&HookExecType::Pull, clean, &path_config.local_path)?;
 
     log_debug!(
         "context path: {:?} (exists: {})",

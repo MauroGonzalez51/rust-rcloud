@@ -53,8 +53,6 @@ pub fn sync_single(
 
     let hooks = &path_config.hooks;
 
-    utils::clean(direction, context.local.clean, &path_config.local_path)?;
-
     match direction {
         HookExecType::Push => utils::push(
             &mut context.registry,
@@ -72,6 +70,7 @@ pub fn sync_single(
             &path_config,
             &hooks.pull,
             context.local.force,
+            context.local.clean,
         )?,
     }
 
