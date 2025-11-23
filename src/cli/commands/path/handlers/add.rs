@@ -2,7 +2,7 @@ use crate::{
     cli::{commands::path::utils::path, context::CommandContext},
     config::prelude::*,
     hooks::prelude::HookBuilder,
-    log_debug, log_warn,
+    log_debug, log_warn, utils,
 };
 use anyhow::Context;
 use inquire::Confirm;
@@ -34,8 +34,7 @@ pub fn path_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
             .context("failed to get local path")?,
     };
 
-    let local_path = std::fs::canonicalize(shellexpand::tilde(&local_path).to_string())
-        .with_context(|| format!("failed to resolve local path: {}", local_path))?
+    let local_path = utils::path::expand_path(local_path)?
         .to_string_lossy()
         .to_string();
 
