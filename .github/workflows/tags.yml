@@ -42,15 +42,3 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
           git push origin "v${{ steps.version.outputs.version }}"
-
-      - name: Comment on PR
-        if: steps.check_tag.outputs.exists == 'false'
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            🎉 **Version bump merged successfully!**
-
-            Tag `v${{ steps.version.outputs.version }}` has been created automatically.
-
-            🚀 Release workflow will start shortly: [${{ github.server_url }}/${{ github.repository }}/actions](https://github.com/${{ github.repository }}/actions)
