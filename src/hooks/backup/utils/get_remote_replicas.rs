@@ -33,8 +33,6 @@ pub fn get_remote_replicas(
     let re = regex::Regex::new(r"^(\d+)\.(\d+)$").context("failed to create regex")?;
     let mut replicas = Vec::new();
 
-    log_debug!("remote replicas found: {:?}", replicas);
-
     for filename in String::from_utf8_lossy(&output.stdout).lines() {
         let path = std::path::Path::new(filename);
 
@@ -42,6 +40,8 @@ pub fn get_remote_replicas(
             replicas.push(replica_info);
         }
     }
+
+    log_debug!("remote replicas found: {:?}", replicas);
 
     Ok(replicas)
 }

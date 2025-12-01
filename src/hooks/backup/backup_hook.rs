@@ -47,6 +47,7 @@ impl BackupHook {
             self.replicas as usize,
             &ctx.rclone_path,
             &ctx.remote_config,
+            remote_path,
         )
         .context("failed to rotate remote replicas")?;
 
