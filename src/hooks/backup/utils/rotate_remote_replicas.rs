@@ -1,4 +1,6 @@
-use crate::{config::prelude::Remote, hooks::backup::backup_hook::BackupHookReplica, log_warn};
+use crate::{
+    config::prelude::Remote, hooks::backup::backup_hook::BackupHookReplica, log_debug, log_warn,
+};
 use anyhow::Context;
 
 pub fn rotate_remote_replicas(
@@ -15,6 +17,8 @@ pub fn rotate_remote_replicas(
     if current_count >= max_replicas {
         let to_remove = (current_count - max_replicas) + 1;
 
+        log_debug!("found {} old replicas to remove", to_remove);
+
         for old in remote_replicas.iter().rev().take(to_remove) {
             let filename = old
                 .path
@@ -27,8 +31,11 @@ pub fn rotate_remote_replicas(
                 remote_config.remote_name, remote_backup_path, filename
             );
 
+            log_debug!("removing old replica: {}", remote_path);
+
             let output = std::process::Command::new(rclone_path)
                 .args(["purge", &remote_path])
+                .env("RCLONE_DRIVE_USE_TRASH", "false")
                 .output()
                 .with_context(|| format!("failed to purge remote file/dir: {}", remote_path,))?;
 
