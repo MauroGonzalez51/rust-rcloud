@@ -35,6 +35,7 @@ pub fn rotate_remote_replicas(
 
             let output = std::process::Command::new(rclone_path)
                 .args(["purge", &remote_path])
+                .env("RCLONE_DRIVE_USE_TRASH", "false")
                 .output()
                 .with_context(|| format!("failed to purge remote file/dir: {}", remote_path,))?;
 
