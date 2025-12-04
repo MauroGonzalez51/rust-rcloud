@@ -1,11 +1,10 @@
 use crate::{
     cli::commands::sync::utils,
     config::{
-        prelude::{
-            HookConfig, HookContext, HookContextMetadata, HookExecType, PathConfig, Registry,
-        },
+        prelude::{HookConfig, HookExecType, PathConfig, Registry},
         remote::Remote,
     },
+    hooks::prelude::{HookContext, HookContextMetadata},
     log_debug, log_info, log_success, log_warn,
     utils::hash,
 };

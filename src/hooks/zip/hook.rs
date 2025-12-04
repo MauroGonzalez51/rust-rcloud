@@ -1,8 +1,9 @@
 use crate::{
-    config::prelude::{Hook, HookContext, HookContextMetadata, HookExecType, Hooks},
-    define_hook, log_info,
-    utils::file::TempFileWriter,
-    utils::hash,
+    config::prelude::{Hook, HookExecType},
+    define_hook,
+    hooks::prelude::{HookContext, HookContextMetadata},
+    log_info,
+    utils::{self, file::TempFileWriter},
 };
 use anyhow::{Context, bail};
 
@@ -12,18 +13,6 @@ define_hook!(ZipHook {
 });
 
 impl Hook for ZipHook {
-    fn name(&self) -> &'static str {
-        "zip"
-    }
-
-    fn exec_type(&self) -> &HookExecType {
-        &self.exec
-    }
-
-    fn hook_type(&self) -> &Hooks {
-        &Hooks::Zip
-    }
-
     fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext> {
         if !ctx.file_exists() {
             bail!("source file does not exist: {:?}", &ctx.path);
@@ -61,7 +50,7 @@ impl Hook for ZipHook {
                 let cursor = zip.finish().context("failed to finish zip")?;
                 let zip_bytes = cursor.into_inner();
 
-                let checksum = hash::Hash::hash_bytes(zip_bytes);
+                let checksum = utils::hash::Hash::hash_bytes(zip_bytes);
 
                 let file_path = zip_bytes
                     .write_temp()

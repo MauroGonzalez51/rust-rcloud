@@ -1,6 +1,6 @@
-use crate::{
-    config::prelude::HookContext,
-    hooks::backup::{BackupHook, utils},
+use crate::hooks::{
+    backup::{BackupHook, utils},
+    prelude::HookContext,
 };
 use anyhow::Context;
 

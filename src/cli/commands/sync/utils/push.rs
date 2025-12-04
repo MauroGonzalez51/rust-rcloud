@@ -1,9 +1,10 @@
 use crate::{
     cli::commands::sync::utils,
     config::{
-        prelude::{HookConfig, HookContext, HookExecType, PathConfig, Registry},
+        prelude::{HookConfig, HookExecType, PathConfig, Registry},
         remote::Remote,
     },
+    hooks::prelude::{HookContext, HookContextMetadata},
     log_debug, log_info, log_success, log_warn,
     utils::hash,
 };
@@ -42,7 +43,8 @@ pub fn push(
             rclone_path,
             remote_config,
             path_config,
-        ),
+        )
+        .with_metadata(HookContextMetadata::CalculatedHash, &processed_hash),
         hooks,
     )?;
 
