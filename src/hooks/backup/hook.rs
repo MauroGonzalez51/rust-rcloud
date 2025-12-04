@@ -1,6 +1,8 @@
 use crate::{
-    config::prelude::{Hook, HookContext, HookExecType, Hooks},
-    define_hook, log_info,
+    config::prelude::{Hook, HookExecType},
+    define_hook,
+    hooks::prelude::HookContext,
+    log_info,
 };
 use inquire_derive::Selectable;
 use serde::{Deserialize, Serialize};
@@ -28,18 +30,6 @@ define_hook!(BackupHook {
 });
 
 impl Hook for BackupHook {
-    fn name(&self) -> &'static str {
-        "backup"
-    }
-
-    fn exec_type(&self) -> &HookExecType {
-        &self.exec
-    }
-
-    fn hook_type(&self) -> &Hooks {
-        &Hooks::Backup
-    }
-
     fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext> {
         for backup_type in &self.types {
             log_info!("executing backup {} in {}", backup_type, self.exec);

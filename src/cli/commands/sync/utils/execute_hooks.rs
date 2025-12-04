@@ -1,5 +1,6 @@
 use crate::{
-    config::prelude::{Hook, HookConfig, HookContext},
+    config::prelude::{Hook, HookConfig},
+    hooks::prelude::HookContext,
     log_debug,
 };
 

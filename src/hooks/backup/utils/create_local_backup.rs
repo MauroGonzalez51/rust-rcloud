@@ -1,4 +1,4 @@
-use crate::{config::prelude::HookContext, log_debug};
+use crate::{hooks::prelude::HookContext, log_debug};
 use anyhow::Context;
 
 pub fn create_local_backup(
