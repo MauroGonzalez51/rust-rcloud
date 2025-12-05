@@ -100,4 +100,9 @@ pub enum Commands {
     },
     #[command(about = "Configure CLI")]
     Configure,
+    #[command(about = "Generate completions for your current shell")]
+    Completion {
+        #[arg(value_enum)]
+        shell: clap_complete::Shell,
+    },
 }
