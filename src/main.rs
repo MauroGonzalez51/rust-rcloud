@@ -11,7 +11,7 @@ use crate::{
     config::prelude::*,
     utils::logger::LOG,
 };
-use anyhow::{Context, bail};
+use anyhow::Context;
 use clap::Parser;
 use dotenvy::dotenv;
 
@@ -19,7 +19,6 @@ use_handlers! {
     simple: {
         (remote, list),
         (path, list),
-        (registry, edit),
         (configure, setup)
     },
     with_args: {
@@ -41,43 +40,38 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
         LOG.set_level(utils::logger::LogLevel::Debug);
     }
 
+    let system_root =
+        utils::config_path::get_default_config_path().context("failed to get app config path")?;
+
     let config_path = args
         .global
         .config
         .clone()
-        .unwrap_or_else(|| std::path::PathBuf::from("rcloud.toml"));
+        .unwrap_or_else(|| system_root.join("rcloud.toml"));
+
+    let app_config = AppConfig::load(&config_path).unwrap_or_else(|e| {
+        if args.global.config.is_none() || config_path.exists() {
+            LOG.warn(format!("could not load config file: {}", e));
+        }
+
+        AppConfig::default()
+    });
 
     let registry_path = args
         .global
         .registry
         .clone()
-        .ok_or_else(|| anyhow::anyhow!("registry file not especified"))?;
+        .unwrap_or_else(|| system_root.join("registry.json"));
 
     if registry_path.is_dir() {
-        bail!(
-            "registry must be a file, not a directory: {}",
-            registry_path.display()
-        );
+        anyhow::bail!("registry must be a file: {}", registry_path.display());
     }
-
-    let app_config = AppConfig::load(&config_path).unwrap_or_else(|e| {
-        LOG.warn(format!("could not load config file: {}", e));
-        AppConfig::default()
-    });
-
-    log_debug!("app config loaded: {:?}", app_config);
 
     let registry = Registry::load(&registry_path).context("failed to load registry")?;
 
     let Cli { global, command } = args;
 
     match &command {
-        Commands::Registry { action } => match action {
-            cli::commands::registry::command::RegistryCommand::Edit => {
-                registry_edit(command_context!(app_config, global, registry))?
-            }
-        },
-
         Commands::Remote { action } => match action {
             cli::commands::remote::command::RemoteCommand::List => {
                 remote_list(command_context!(app_config, global, registry));

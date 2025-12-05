@@ -19,16 +19,14 @@ impl Hook for ZipHook {
         }
 
         let base_temp_dir = || -> anyhow::Result<Option<std::path::PathBuf>> {
-            if let Some(core) = &cfg.core {
-                if let Some(path) = &core.temp_path {
-                    if !path.exists() {
-                        std::fs::create_dir_all(path).with_context(|| {
-                            format!("failed to create custom temp directory: {}", path.display())
-                        })?;
-                    }
-
-                    return Ok(Some(path.clone()));
+            if let Some(path) = &cfg.core.temp_path {
+                if !path.exists() {
+                    std::fs::create_dir_all(path).with_context(|| {
+                        format!("failed to create custom temp directory: {}", path.display())
+                    })?;
                 }
+
+                return Ok(Some(path.clone()));
             }
 
             Ok(None)

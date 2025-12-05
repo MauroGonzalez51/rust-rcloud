@@ -1,0 +1,7 @@
+# -------------------------------------------------------------
+# RCloud Configuration File
+# -------------------------------------------------------------
+
+[core]
+# if leave uncommented it will use system temp directory
+# temp_path = "D:/Temp/rcloud"

@@ -1,7 +1,4 @@
-use crate::{
-    config::prelude::*,
-    log_info, log_warn,
-};
+use crate::{config::prelude::*, log_debug, log_info, log_warn};
 use anyhow::{Context, bail};
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};
@@ -81,7 +78,7 @@ impl Registry {
         match serde_json::from_str::<Registry>(&contents) {
             Ok(mut loaded) => {
                 loaded.registry_path = registry_path.clone();
-                log_info!("file loaded");
+                log_debug!("file loaded");
                 Ok(loaded)
             }
             Err(err) => {
