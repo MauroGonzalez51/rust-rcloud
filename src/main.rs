@@ -3,6 +3,8 @@ mod config;
 mod hooks;
 mod utils;
 
+use std::io;
+
 use crate::{
     cli::{
         context::CommandContext,
@@ -12,7 +14,8 @@ use crate::{
     utils::logger::LOG,
 };
 use anyhow::Context;
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::generate;
 use dotenvy::dotenv;
 
 use_handlers! {
@@ -171,6 +174,12 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
         },
 
         Commands::Configure => configure_setup(command_context!(app_config, global, registry))?,
+
+        Commands::Completion { shell } => {
+            let mut cmd = Cli::command();
+            generate(*shell, &mut cmd, "rcloud", &mut io::stdout());
+            return Ok(());
+        }
     }
 
     Ok(())
