@@ -11,7 +11,7 @@ use crate::{
     config::prelude::*,
     utils::logger::LOG,
 };
-use anyhow::{Context, bail};
+use anyhow::Context;
 use clap::Parser;
 use dotenvy::dotenv;
 
@@ -19,7 +19,6 @@ use_handlers! {
     simple: {
         (remote, list),
         (path, list),
-        (registry, edit),
         (configure, setup)
     },
     with_args: {
@@ -41,17 +40,31 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
         LOG.set_level(utils::logger::LogLevel::Debug);
     }
 
+    let system_root =
+        utils::config_path::get_default_config_path().context("failed to get app config path")?;
+
+    let config_path = args
+        .global
+        .config
+        .clone()
+        .unwrap_or_else(|| system_root.join("rcloud.toml"));
+
+    let app_config = AppConfig::load(&config_path).unwrap_or_else(|e| {
+        if args.global.config.is_none() || config_path.exists() {
+            LOG.warn(format!("could not load config file: {}", e));
+        }
+
+        AppConfig::default()
+    });
+
     let registry_path = args
         .global
         .registry
         .clone()
-        .ok_or_else(|| anyhow::anyhow!("registry file not especified"))?;
+        .unwrap_or_else(|| system_root.join("registry.json"));
 
     if registry_path.is_dir() {
-        bail!(
-            "registry must be a file, not a directory: {}",
-            registry_path.display()
-        );
+        anyhow::bail!("registry must be a file: {}", registry_path.display());
     }
 
     let registry = Registry::load(&registry_path).context("failed to load registry")?;
@@ -59,41 +72,46 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
     let Cli { global, command } = args;
 
     match &command {
-        Commands::Registry { action } => match action {
-            cli::commands::registry::command::RegistryCommand::Edit => {
-                registry_edit(command_context!(global, registry))?
-            }
-        },
-
         Commands::Remote { action } => match action {
             cli::commands::remote::command::RemoteCommand::List => {
-                remote_list(command_context!(global, registry));
+                remote_list(command_context!(app_config, global, registry));
             }
 
-            cli::commands::remote::command::RemoteCommand::Add { name, provider } => remote_add(
-                command_context!(global, registry, RemoteAddArgs { name, provider }),
+            cli::commands::remote::command::RemoteCommand::Add { name, provider } => {
+                remote_add(command_context!(
+                    app_config,
+                    global,
+                    registry,
+                    RemoteAddArgs { name, provider }
+                ))?
+            }
+
+            cli::commands::remote::command::RemoteCommand::Remove { id } => remote_remove(
+                command_context!(app_config, global, registry, RemoteRemoveArgs { id }),
             )?,
-
-            cli::commands::remote::command::RemoteCommand::Remove { id } => {
-                remote_remove(command_context!(global, registry, RemoteRemoveArgs { id }))?
-            }
 
             cli::commands::remote::command::RemoteCommand::Update { id, name, provider } => {
                 remote_update(command_context!(
+                    app_config,
                     global,
                     registry,
                     RemoteUpdateArgs { id, name, provider }
                 ))?
             }
 
-            cli::commands::remote::command::RemoteCommand::Ls { path, path_config } => remote_ls(
-                command_context!(global, registry, RemoteLsArgs { path, path_config }),
-            )?,
+            cli::commands::remote::command::RemoteCommand::Ls { path, path_config } => {
+                remote_ls(command_context!(
+                    app_config,
+                    global,
+                    registry,
+                    RemoteLsArgs { path, path_config }
+                ))?
+            }
         },
 
         Commands::Path { action } => match action {
             cli::commands::path::command::PathCommand::List => {
-                path_list(command_context!(global, registry));
+                path_list(command_context!(app_config, global, registry));
             }
 
             cli::commands::path::command::PathCommand::Add {
@@ -101,6 +119,7 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                 local_path,
                 remote_path,
             } => path_add(command_context!(
+                app_config,
                 global,
                 registry,
                 PathAddArgs {
@@ -111,7 +130,7 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
             ))?,
 
             cli::commands::path::command::PathCommand::Remove { id } => path_remove(
-                command_context!(global, registry, PathRemoveArgs { path_id: id }),
+                command_context!(app_config, global, registry, PathRemoveArgs { path_id: id }),
             )?,
         },
 
@@ -121,6 +140,7 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                 force_all,
                 clean_all,
             } => sync_all(command_context!(
+                app_config,
                 global,
                 registry,
                 SyncAllArgs {
@@ -137,6 +157,7 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                 clean,
             } => {
                 sync_single(command_context!(
+                    app_config,
                     global,
                     registry,
                     SyncSingleArgs {
@@ -149,7 +170,7 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
             }
         },
 
-        Commands::Configure => configure_setup(command_context!(global, registry))?,
+        Commands::Configure => configure_setup(command_context!(app_config, global, registry))?,
     }
 
     Ok(())

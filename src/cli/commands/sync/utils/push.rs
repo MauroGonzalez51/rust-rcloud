@@ -1,9 +1,6 @@
 use crate::{
     cli::commands::sync::utils,
-    config::{
-        prelude::{HookConfig, HookExecType, PathConfig, Registry},
-        remote::Remote,
-    },
+    config::prelude::{AppConfig, HookConfig, HookExecType, PathConfig, Registry, Remote},
     hooks::prelude::{HookContext, HookContextMetadata},
     log_debug, log_info, log_success, log_warn,
     utils::hash,
@@ -11,22 +8,36 @@ use crate::{
 use anyhow::Context;
 use std::path::PathBuf;
 
-pub fn push(
-    registry: &mut Registry,
-    rclone_path: &str,
-    remote_config: &Remote,
-    path_config: &PathConfig,
-    hooks: &[HookConfig],
-    force: &bool,
-) -> anyhow::Result<()> {
+pub struct PushOptionsPaths<'a> {
+    pub rclone: &'a str,
+    pub remote: &'a Remote,
+    pub path_config: &'a PathConfig,
+}
+
+pub struct PushOptions<'a> {
+    pub config: &'a AppConfig,
+    pub registry: &'a mut Registry,
+    pub paths: PushOptionsPaths<'a>,
+    pub hooks: &'a [HookConfig],
+    pub force: &'a bool,
+}
+
+pub fn push(options: PushOptions) -> anyhow::Result<()> {
     log_info!("running pre-transaction hooks");
 
-    let processed_hash = hash::Hash::hash_path(&std::path::PathBuf::from(&path_config.local_path))
-        .context("failed to calculate content hash")?;
+    let processed_hash = hash::Hash::hash_path(&std::path::PathBuf::from(
+        &options.paths.path_config.local_path,
+    ))
+    .context("failed to calculate content hash")?;
 
     log_debug!("calculated hash: {}", processed_hash);
 
-    match utils::force(&HookExecType::Push, force, path_config, &processed_hash) {
+    match utils::force(
+        &HookExecType::Push,
+        options.force,
+        options.paths.path_config,
+        &processed_hash,
+    ) {
         utils::ForceResult::Proceed => {}
         utils::ForceResult::HashMatch => {
             log_warn!("content unchanged (hash match). skipping");
@@ -39,18 +50,19 @@ pub fn push(
 
     let context = utils::execute_hooks(
         HookContext::new(
-            PathBuf::from(&path_config.local_path),
-            rclone_path,
-            remote_config,
-            path_config,
+            PathBuf::from(&options.paths.path_config.local_path),
+            options.paths.rclone,
+            options.paths.remote,
+            options.paths.path_config,
         )
         .with_metadata(HookContextMetadata::CalculatedHash, &processed_hash),
-        hooks,
+        options.hooks,
+        options.config,
     )?;
 
     let final_name = utils::compute_remote_filename(
-        hooks,
-        std::path::Path::new(&path_config.remote_path)
+        options.hooks,
+        std::path::Path::new(&options.paths.path_config.remote_path)
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("archive"),
@@ -62,10 +74,10 @@ pub fn push(
 
     log_debug!("final_name: {:?}", final_name);
 
-    let final_path = match PathBuf::from(&path_config.local_path) == context.path {
+    let final_path = match PathBuf::from(&options.paths.path_config.local_path) == context.path {
         true => {
             log_debug!("path unchanged, using original");
-            PathBuf::from(&path_config.local_path)
+            PathBuf::from(&options.paths.path_config.local_path)
         }
         false => {
             log_debug!("path changed by hooks, renaming to final_name");
@@ -101,11 +113,14 @@ pub fn push(
     log_debug!("final_path: {:?}", final_path);
 
     let status = utils::execute_rclone(
-        rclone_path,
+        options.paths.rclone,
         final_path
             .to_str()
             .context("failed to convert final_path to str")?,
-        &format!("{}:{}", remote_config.remote_name, path_config.remote_path),
+        &format!(
+            "{}:{}",
+            options.paths.remote.remote_name, options.paths.path_config.remote_path
+        ),
         None,
     )?;
 
@@ -113,9 +128,14 @@ pub fn push(
         anyhow::bail!("rclone push sync failed");
     }
 
-    registry
+    options
+        .registry
         .tx(|rgx| {
-            if let Some(path) = rgx.paths.iter_mut().find(|p| p.id == path_config.id) {
+            if let Some(path) = rgx
+                .paths
+                .iter_mut()
+                .find(|p| p.id == options.paths.path_config.id)
+            {
                 path.hash = Some(processed_hash);
             }
         })
@@ -123,9 +143,9 @@ pub fn push(
 
     log_success!(
         "sent to remote {} -> {}:{}",
-        path_config.local_path,
-        remote_config.remote_name,
-        path_config.remote_path
+        options.paths.path_config.local_path,
+        options.paths.remote.remote_name,
+        options.paths.path_config.remote_path
     );
 
     Ok(())

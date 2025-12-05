@@ -1,10 +1,8 @@
 use crate::cli::commands::{
-    path::command::PathCommand, registry::command::RegistryCommand, remote::command::RemoteCommand,
-    sync::command::SyncCommand,
+    path::command::PathCommand, remote::command::RemoteCommand, sync::command::SyncCommand,
 };
-use std::path::PathBuf;
-
 use clap::{Args, Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Args)]
 pub struct GlobalParameters {
@@ -20,13 +18,23 @@ pub struct GlobalParameters {
 
     #[arg(
         short = 'c',
+        long = "config",
+        value_name = "FILE",
+        help = "Config File (.toml)",
+        help_heading = "GLOBAL OPTIONS",
+        global = true,
+        value_parser = clap::value_parser!(PathBuf),
+    )]
+    pub config: Option<PathBuf>,
+
+    #[arg(
+        short = 'r',
         long = "registry",
         value_name = "FILE",
         help = "Registry File",
         help_heading = "GLOBAL OPTIONS",
         global = true,
         value_parser = clap::value_parser!(PathBuf),
-        env = "RUST_RCLOUD_REGISTRY",
     )]
     pub registry: Option<PathBuf>,
 
@@ -35,8 +43,7 @@ pub struct GlobalParameters {
         long = "debug",
         help = "Debug Mode",
         help_heading = "GLOBAL OPTIONS",
-        global = true,
-        env = "RUST_RCLOUD_DEBUG"
+        global = true
     )]
     pub debug: bool,
 
@@ -76,11 +83,6 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    #[command(about = "Registry related commands")]
-    Registry {
-        #[command(subcommand)]
-        action: RegistryCommand,
-    },
     #[command(about = "Manage Remotes")]
     Remote {
         #[command(subcommand)]
