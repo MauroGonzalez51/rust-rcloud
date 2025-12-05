@@ -2,9 +2,8 @@ use crate::cli::commands::{
     path::command::PathCommand, registry::command::RegistryCommand, remote::command::RemoteCommand,
     sync::command::SyncCommand,
 };
-use std::path::PathBuf;
-
 use clap::{Args, Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Args)]
 pub struct GlobalParameters {
@@ -20,6 +19,18 @@ pub struct GlobalParameters {
 
     #[arg(
         short = 'c',
+        long = "config",
+        value_name = "FILE",
+        help = "Config File (.toml)",
+        help_heading = "GLOBAL OPTIONS",
+        global = true,
+        value_parser = clap::value_parser!(PathBuf),
+        env = "RUST_RCLOUD_CONFIG"
+    )]
+    pub config: Option<PathBuf>,
+
+    #[arg(
+        short = 'r',
         long = "registry",
         value_name = "FILE",
         help = "Registry File",

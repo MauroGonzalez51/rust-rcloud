@@ -42,8 +42,12 @@ pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
                 clean: context.local.clean_all,
             };
 
-            let path_context =
-                CommandContext::new(context.global.clone(), context.registry.clone(), args);
+            let path_context = CommandContext::new(
+                context.config.clone(),
+                context.global.clone(),
+                context.registry.clone(),
+                args,
+            );
 
             match single::sync_single(path_context) {
                 Ok(_context) => {

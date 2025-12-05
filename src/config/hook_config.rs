@@ -1,4 +1,5 @@
 use crate::{
+    config::prelude::AppConfig,
     hooks::prelude::{BackupHook, BackupHookConfig, HookContext, ZipHook, ZipHookConfig},
     register_hooks,
 };
@@ -7,7 +8,7 @@ use inquire_derive::Selectable;
 use serde::{Deserialize, Serialize};
 
 pub trait Hook: std::fmt::Debug + Send + Sync {
-    fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext>;
+    fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext>;
 }
 
 #[derive(Debug, Clone, Copy, Selectable)]

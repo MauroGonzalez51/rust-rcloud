@@ -1,15 +1,20 @@
-use crate::{cli::parser::GlobalParameters, config::prelude::Registry};
+use crate::{
+    cli::parser::GlobalParameters,
+    config::prelude::{AppConfig, Registry},
+};
 use std::ops::{Deref, DerefMut};
 
 pub struct CommandContext<L = ()> {
     pub global: GlobalParameters,
+    pub config: AppConfig,
     pub registry: Registry,
     pub local: L,
 }
 
 impl<L> CommandContext<L> {
-    pub fn new(global: GlobalParameters, registry: Registry, local: L) -> Self {
+    pub fn new(config: AppConfig, global: GlobalParameters, registry: Registry, local: L) -> Self {
         Self {
+            config,
             global,
             registry,
             local,
@@ -37,9 +42,10 @@ impl<L> From<CommandContext<L>> for Registry {
     }
 }
 
-impl From<(GlobalParameters, Registry)> for CommandContext<()> {
-    fn from((global, registry): (GlobalParameters, Registry)) -> Self {
+impl From<(AppConfig, GlobalParameters, Registry)> for CommandContext<()> {
+    fn from((config, global, registry): (AppConfig, GlobalParameters, Registry)) -> Self {
         Self {
+            config,
             global,
             registry,
             local: (),
@@ -47,9 +53,10 @@ impl From<(GlobalParameters, Registry)> for CommandContext<()> {
     }
 }
 
-impl<L> From<(GlobalParameters, Registry, L)> for CommandContext<L> {
-    fn from((global, registry, local): (GlobalParameters, Registry, L)) -> Self {
+impl<L> From<(AppConfig, GlobalParameters, Registry, L)> for CommandContext<L> {
+    fn from((config, global, registry, local): (AppConfig, GlobalParameters, Registry, L)) -> Self {
         Self {
+            config,
             global,
             registry,
             local,

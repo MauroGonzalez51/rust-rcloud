@@ -1,11 +1,11 @@
 use crate::{
-    config::prelude::{Hook, HookExecType},
+    config::prelude::{AppConfig, Hook, HookExecType},
     define_hook,
     hooks::prelude::{HookContext, HookContextMetadata},
-    log_info,
-    utils::{self, file::TempFileWriter},
+    log_debug, log_info, utils,
 };
-use anyhow::{Context, bail};
+use anyhow::Context;
+use std::io::Write;
 
 define_hook!(ZipHook {
     level: Option<i64>,
@@ -13,16 +13,32 @@ define_hook!(ZipHook {
 });
 
 impl Hook for ZipHook {
-    fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext> {
+    fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext> {
         if !ctx.file_exists() {
-            bail!("source file does not exist: {:?}", &ctx.path);
+            anyhow::bail!("source file does not exist: {:?}", &ctx.path);
         }
+
+        let base_temp_dir = || -> anyhow::Result<Option<std::path::PathBuf>> {
+            if let Some(core) = &cfg.core {
+                if let Some(path) = &core.temp_path {
+                    if !path.exists() {
+                        std::fs::create_dir_all(path).with_context(|| {
+                            format!("failed to create custom temp directory: {}", path.display())
+                        })?;
+                    }
+
+                    return Ok(Some(path.clone()));
+                }
+            }
+
+            Ok(None)
+        };
 
         match self.exec {
             HookExecType::Push => {
                 let path = &ctx.path;
 
-                log_info!("processing file: {:?}", path);
+                log_debug!("processing file: {:?}", path);
                 if let Some(level) = self.level {
                     log_info!("using compression level: {}", level);
                 }
@@ -52,9 +68,21 @@ impl Hook for ZipHook {
 
                 let checksum = utils::hash::Hash::hash_bytes(zip_bytes);
 
-                let file_path = zip_bytes
-                    .write_temp()
-                    .context("failed to write temp file")?;
+                let mut temp_file = match base_temp_dir()? {
+                    Some(directory) => tempfile::Builder::new()
+                        .prefix("rcloud-zip-")
+                        .suffix(".zip")
+                        .tempfile_in(directory)
+                        .context("failed to create temp file in custom directory")?,
+                    None => tempfile::NamedTempFile::new()
+                        .context("failed to create temp file in system directory")?,
+                };
+
+                temp_file
+                    .write_all(zip_bytes)
+                    .context("failed to write zip bytes to temp file")?;
+
+                let (_, file_path) = temp_file.keep().context("failed to persist temp file")?;
 
                 Ok(HookContext::new(
                     file_path,
@@ -70,7 +98,13 @@ impl Hook for ZipHook {
                 let mut archive =
                     zip::read::ZipArchive::new(file).context("failed to read zip archive")?;
 
-                let temp_dir = tempfile::tempdir().context("failed to create temp directory")?;
+                let temp_dir = match base_temp_dir()? {
+                    Some(directory) => tempfile::Builder::new()
+                        .prefix("rcloud-extract-")
+                        .tempdir_in(directory)
+                        .context("failed to create temp dir in custom path")?,
+                    None => tempfile::tempdir().context("failed to create system temp dir")?,
+                };
 
                 for i in 0..archive.len() {
                     let mut file = archive.by_index(i).context("failed to get file in zip")?;

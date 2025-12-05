@@ -100,9 +100,9 @@ macro_rules! use_handlers {
 /// ```
 #[macro_export]
 macro_rules! command_context {
-    // With LocalArgs - support field: value syntax
-    ($global:expr, $registry:expr, $args_type:ident { $($field:ident $(: $value:expr)?),* $(,)? }) => {
+    ($config:expr, $global:expr, $registry:expr, $args_type:ident { $($field:ident $(: $value:expr)?),* $(,)? }) => {
         CommandContext::from((
+            $config,
             $global,
             $registry,
             $args_type {
@@ -113,8 +113,7 @@ macro_rules! command_context {
         ))
     };
 
-    // Without LocalArgs
-    ($global:expr, $registry:expr) => {
-        CommandContext::from(($global, $registry))
+    ($config:expr, $global:expr, $registry:expr) => {
+        CommandContext::from(($config, $global, $registry))
     };
 }

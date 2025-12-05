@@ -1,5 +1,5 @@
 use crate::{
-    config::prelude::{Hook, HookExecType},
+    config::prelude::{AppConfig, Hook, HookExecType},
     define_hook,
     hooks::prelude::HookContext,
     log_info,
@@ -30,7 +30,7 @@ define_hook!(BackupHook {
 });
 
 impl Hook for BackupHook {
-    fn process(&self, ctx: HookContext) -> anyhow::Result<HookContext> {
+    fn process(&self, ctx: HookContext, _cfg: &AppConfig) -> anyhow::Result<HookContext> {
         for backup_type in &self.types {
             log_info!("executing backup {} in {}", backup_type, self.exec);
 

@@ -1,7 +1,7 @@
 use crate::{
     cli::commands::sync::utils,
     config::{
-        prelude::{HookConfig, HookExecType, PathConfig, Registry},
+        prelude::{AppConfig, HookConfig, HookExecType, PathConfig, Registry},
         remote::Remote,
     },
     hooks::prelude::{HookContext, HookContextMetadata},
@@ -10,21 +10,28 @@ use crate::{
 };
 use anyhow::Context;
 
-pub fn pull(
-    registry: &mut Registry,
-    rclone_path: &str,
-    remote_config: &Remote,
-    path_config: &PathConfig,
-    hooks: &[HookConfig],
-    force: &bool,
-    clean: &bool,
-) -> anyhow::Result<()> {
+pub struct PullOptionsPaths<'a> {
+    pub rclone: &'a str,
+    pub remote: &'a Remote,
+    pub path_config: &'a PathConfig,
+}
+
+pub struct PullOptions<'a> {
+    pub config: &'a AppConfig,
+    pub registry: &'a mut Registry,
+    pub paths: PullOptionsPaths<'a>,
+    pub hooks: &'a [HookConfig],
+    pub force: &'a bool,
+    pub clean: &'a bool,
+}
+
+pub fn pull(options: PullOptions) -> anyhow::Result<()> {
     let temp_dir = tempfile::tempdir().context("failed to create temp directory")?;
 
-    let remote_filename = match hooks.iter().any(|h| h.modifies_filename()) {
+    let remote_filename = match options.hooks.iter().any(|h| h.modifies_filename()) {
         true => Some(utils::compute_remote_filename(
-            hooks,
-            std::path::Path::new(&path_config.remote_path)
+            options.hooks,
+            std::path::Path::new(&options.paths.path_config.remote_path)
                 .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("archive"),
@@ -33,11 +40,14 @@ pub fn pull(
     };
 
     let remote_path = match &remote_filename {
-        None => format!("{}:{}", remote_config.remote_name, path_config.remote_path),
+        None => format!(
+            "{}:{}",
+            options.paths.remote.remote_name, options.paths.path_config.remote_path
+        ),
         Some(filename) => {
             format!(
                 "{}:{}/{}",
-                remote_config.remote_name, path_config.remote_path, filename
+                options.paths.remote.remote_name, options.paths.path_config.remote_path, filename
             )
         }
     };
@@ -45,7 +55,7 @@ pub fn pull(
     log_debug!("remote_path: {:?}", remote_path);
 
     let status = utils::execute_rclone(
-        rclone_path,
+        options.paths.rclone,
         &remote_path,
         temp_dir
             .path()
@@ -81,18 +91,24 @@ pub fn pull(
         downloaded_file.exists()
     );
 
-    let reversed_hooks: Vec<HookConfig> = hooks.iter().rev().cloned().collect();
+    let reversed_hooks: Vec<HookConfig> = options.hooks.iter().rev().cloned().collect();
     let context = utils::execute_hooks(
-        HookContext::new(downloaded_file, rclone_path, remote_config, path_config)
-            .with_metadata(
-                HookContextMetadata::SourceLocalPath,
-                &path_config.local_path,
-            )
-            .with_metadata(
-                HookContextMetadata::SourceRemotePath,
-                &path_config.remote_path,
-            ),
+        HookContext::new(
+            downloaded_file,
+            options.paths.rclone,
+            options.paths.remote,
+            options.paths.path_config,
+        )
+        .with_metadata(
+            HookContextMetadata::SourceLocalPath,
+            &options.paths.path_config.local_path,
+        )
+        .with_metadata(
+            HookContextMetadata::SourceRemotePath,
+            &options.paths.path_config.remote_path,
+        ),
         &reversed_hooks,
+        options.config,
     )?;
 
     let processed_hash = hash::Hash::hash_path(&context.path)
@@ -100,7 +116,12 @@ pub fn pull(
 
     log_debug!("processed hash: {}", processed_hash);
 
-    match utils::force(&HookExecType::Pull, force, path_config, &processed_hash) {
+    match utils::force(
+        &HookExecType::Pull,
+        options.force,
+        options.paths.path_config,
+        &processed_hash,
+    ) {
         utils::ForceResult::Proceed => {}
         utils::ForceResult::HashMatch => {
             log_warn!("content unchanged (hash match). skipping");
@@ -113,7 +134,11 @@ pub fn pull(
 
     log_info!("moving processed content to local_path");
 
-    utils::clean(&HookExecType::Pull, clean, &path_config.local_path)?;
+    utils::clean(
+        &HookExecType::Pull,
+        options.clean,
+        &options.paths.path_config.local_path,
+    )?;
 
     log_debug!(
         "context path: {:?} (exists: {})",
@@ -121,40 +146,55 @@ pub fn pull(
         context.path.exists()
     );
 
-    if let Some(parent) = std::path::Path::new(&path_config.local_path).parent() {
+    if let Some(parent) = std::path::Path::new(&options.paths.path_config.local_path).parent() {
         std::fs::create_dir_all(parent).context("failed to create parent directory")?;
     }
 
     if context.path.is_file() {
         fs_extra::file::move_file(
             &context.path,
-            &path_config.local_path,
+            &options.paths.path_config.local_path,
             &fs_extra::file::CopyOptions::new(),
         )
-        .with_context(|| format!("failed to move file to {}", path_config.local_path))?;
+        .with_context(|| {
+            format!(
+                "failed to move file to {}",
+                options.paths.path_config.local_path
+            )
+        })?;
     }
 
     if context.path.is_dir() {
-        if !std::path::Path::new(&path_config.local_path).exists() {
-            std::fs::create_dir_all(&path_config.local_path)
+        if !std::path::Path::new(&options.paths.path_config.local_path).exists() {
+            std::fs::create_dir_all(&options.paths.path_config.local_path)
                 .context("failed to create destination directory")?;
         }
 
         fs_extra::dir::copy(
             &context.path,
-            &path_config.local_path,
+            &options.paths.path_config.local_path,
             &fs_extra::dir::CopyOptions::new()
                 .overwrite(true)
                 .content_only(true),
         )
-        .with_context(|| format!("failed to move directory to {}", path_config.local_path))?;
+        .with_context(|| {
+            format!(
+                "failed to move directory to {}",
+                options.paths.path_config.local_path
+            )
+        })?;
 
         std::fs::remove_dir_all(&context.path).context("failed to remove temp directory")?;
     }
 
-    registry
+    options
+        .registry
         .tx(|rgx| {
-            if let Some(path) = rgx.paths.iter_mut().find(|p| p.id == path_config.id) {
+            if let Some(path) = rgx
+                .paths
+                .iter_mut()
+                .find(|p| p.id == options.paths.path_config.id)
+            {
                 path.hash = Some(processed_hash);
             }
         })
@@ -162,9 +202,9 @@ pub fn pull(
 
     log_success!(
         "pulled from remote {}:{} -> {}",
-        remote_config.remote_name,
-        path_config.remote_path,
-        path_config.local_path
+        options.paths.remote.remote_name,
+        options.paths.path_config.remote_path,
+        options.paths.path_config.local_path
     );
 
     Ok(())

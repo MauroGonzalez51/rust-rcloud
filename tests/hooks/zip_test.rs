@@ -1,7 +1,7 @@
 use anyhow::Context;
 use rcloud::{
-    Hook, HookContext, HookContextMetadata, PathConfig, PathConfigHooks, Remote, ZipHook,
-    ZipHookConfig,
+    AppConfig, Hook, HookContext, HookContextMetadata, PathConfig, PathConfigHooks, Remote,
+    ZipHook, ZipHookConfig,
 };
 use std::fs;
 
@@ -28,6 +28,10 @@ fn mock_path() -> PathConfig {
     }
 }
 
+fn mock_app_config() -> AppConfig {
+    AppConfig::default()
+}
+
 #[test]
 fn test_zip_single_file() -> anyhow::Result<()> {
     let temp_dir = tempfile::tempdir().context("failed to create temp_dir")?;
@@ -43,7 +47,9 @@ fn test_zip_single_file() -> anyhow::Result<()> {
 
     let hook = ZipHook::from(config);
     let ctx = HookContext::new(test_file, "", &mock_remote(), &mock_path());
-    let result = hook.process(ctx).context("failed to process file")?;
+    let result = hook
+        .process(ctx, &mock_app_config())
+        .context("failed to process file")?;
 
     assert!(result.path.exists());
     assert!(
@@ -81,7 +87,9 @@ fn test_zip_directory() -> anyhow::Result<()> {
         &mock_remote(),
         &mock_path(),
     );
-    let result = hook.process(ctx).context("failed to process directory")?;
+    let result = hook
+        .process(ctx, &mock_app_config())
+        .context("failed to process directory")?;
 
     assert!(result.path.exists());
 
@@ -110,7 +118,9 @@ fn test_zip_with_exclusions() -> anyhow::Result<()> {
         &mock_remote(),
         &mock_path(),
     );
-    let result = hook.process(ctx).context("failed to process file")?;
+    let result = hook
+        .process(ctx, &mock_app_config())
+        .context("failed to process file")?;
 
     assert!(result.path.exists());
 

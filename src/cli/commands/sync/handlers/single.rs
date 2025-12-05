@@ -6,6 +6,7 @@ use crate::{
     config::prelude::HookExecType,
     log_warn,
 };
+
 use anyhow::Context;
 
 pub struct LocalArgs<'a> {
@@ -54,24 +55,30 @@ pub fn sync_single(
     let hooks = &path_config.hooks;
 
     match direction {
-        HookExecType::Push => utils::push(
-            &mut context.registry,
-            &context.global.rclone,
-            &remote_config,
-            &path_config,
-            &hooks.push,
-            context.local.force,
-        )?,
+        HookExecType::Push => utils::push(utils::push::PushOptions {
+            config: &context.config,
+            registry: &mut context.registry,
+            paths: utils::push::PushOptionsPaths {
+                rclone: &context.global.rclone,
+                remote: &remote_config,
+                path_config: &path_config,
+            },
+            hooks: &hooks.push,
+            force: context.local.force,
+        })?,
 
-        HookExecType::Pull => utils::pull(
-            &mut context.registry,
-            &context.global.rclone,
-            &remote_config,
-            &path_config,
-            &hooks.pull,
-            context.local.force,
-            context.local.clean,
-        )?,
+        HookExecType::Pull => utils::pull(utils::pull::PullOptions {
+            config: &context.config,
+            registry: &mut context.registry,
+            paths: utils::pull::PullOptionsPaths {
+                rclone: &context.global.rclone,
+                remote: &remote_config,
+                path_config: &path_config,
+            },
+            hooks: &hooks.pull,
+            clean: context.local.clean,
+            force: context.local.force,
+        })?,
     }
 
     Ok(context)

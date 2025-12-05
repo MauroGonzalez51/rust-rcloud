@@ -1,5 +1,5 @@
 use crate::{
-    config::prelude::{Hook, HookConfig},
+    config::prelude::{AppConfig, Hook, HookConfig},
     hooks::prelude::HookContext,
     log_debug,
 };
@@ -22,12 +22,13 @@ use crate::{
 pub fn execute_hooks(
     mut context: HookContext,
     hooks: &[HookConfig],
+    config: &AppConfig,
 ) -> anyhow::Result<HookContext> {
     log_debug!("executing hooks: {:?}", hooks);
 
     for hook in hooks {
         let hook: Box<dyn Hook> = Box::from(hook.clone());
-        context = hook.process(context)?;
+        context = hook.process(context, config)?;
     }
 
     Ok(context)
