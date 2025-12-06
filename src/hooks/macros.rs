@@ -5,9 +5,11 @@ macro_rules! register_hooks {
             $variant:ident {
                 config: $config_ty:ty,
                 hook: $hook_ty:ty,
-                enum_type: $enum_val:expr,
+                enum_type: $enum_val:path,
                 modifies_name: $modifies:expr,
-                display: $display_fn:expr
+                display: $display_fn:expr,
+                push_desc: $push_desc:literal,
+                pull_desc: $pull_desc:literal,
             }
         ),* $(,)?
     ) => {
@@ -60,6 +62,19 @@ macro_rules! register_hooks {
                 match self {
                     $(
                         HookConfig::$variant(cfg) => $display_fn(cfg, f),
+                    )*
+                }
+            }
+        }
+
+        impl Hooks {
+            pub fn describe(&self, direction: $crate::config::hook_config::HookExecType) -> &'static str {
+                match self {
+                    $(
+                        $enum_val => match direction {
+                            $crate::config::hook_config::HookExecType::Push => $push_desc,
+                            $crate::config::hook_config::HookExecType::Pull => $pull_desc,
+                        },
                     )*
                 }
             }
