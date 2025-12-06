@@ -95,41 +95,42 @@ impl Logger {
     }
 }
 
-lazy_static::lazy_static! {
-    pub static ref LOG: Logger = Logger::new();
+pub fn logger() -> &'static Logger {
+    static LOG: std::sync::OnceLock<Logger> = std::sync::OnceLock::new();
+    LOG.get_or_init(Logger::new)
 }
 
 #[macro_export]
 macro_rules! log_error {
     ($($arg:tt)*) => {
-        $crate::utils::logger::LOG.error(format!($($arg)*))
+        $crate::utils::logger::logger().error(format!($($arg)*))
     };
 }
 
 #[macro_export]
 macro_rules! log_warn {
     ($($arg:tt)*) => {
-        $crate::utils::logger::LOG.warn(format!($($arg)*))
+        $crate::utils::logger::logger().warn(format!($($arg)*))
     };
 }
 
 #[macro_export]
 macro_rules! log_info {
     ($($arg:tt)*) => {
-        $crate::utils::logger::LOG.info(format!($($arg)*))
+        $crate::utils::logger::logger().info(format!($($arg)*))
     };
 }
 
 #[macro_export]
 macro_rules! log_success {
     ($($arg:tt)*) => {
-        $crate::utils::logger::LOG.success(format!($($arg)*))
+        $crate::utils::logger::logger().success(format!($($arg)*))
     };
 }
 
 #[macro_export]
 macro_rules! log_debug {
     ($($arg:tt)*) => {
-        $crate::utils::logger::LOG.debug(format!($($arg)*))
+        $crate::utils::logger::logger().debug(format!($($arg)*))
     };
 }

@@ -62,7 +62,10 @@ impl Registry {
         fs2::FileExt::unlock(&file).context("failed to release lock on registry")?;
 
         if contents.trim().is_empty() {
-            log_warn!("registry file is empty, creating new one");
+            log_warn!(
+                "registry file is empty, creating new one at: {}",
+                registry_path.display()
+            );
 
             let mut registry = Registry {
                 registry_path: registry_path.clone(),
@@ -92,7 +95,7 @@ impl Registry {
     where
         F: FnOnce(&mut Registry) -> T,
     {
-        log_info!("executing transaction in registry file");
+        log_debug!("executing transaction in registry file");
 
         let backup = self.clone();
 
