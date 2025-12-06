@@ -20,7 +20,7 @@ pub enum Hooks {
 impl std::fmt::Display for Hooks {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Hooks::Zip => write!(f, "Zip Compression"),
+            Hooks::Zip => write!(f, "Zip"),
             Hooks::Backup => write!(f, "Backup"),
         }
     }
@@ -47,13 +47,17 @@ register_hooks! {
         hook: ZipHook,
         enum_type: Hooks::Zip,
         modifies_name: true,
-        display: |cfg: &ZipHookConfig, f: &mut std::fmt::Formatter| write!(f, "Zip(level: {:?})", cfg.level)
+        display: |cfg: &ZipHookConfig, f: &mut std::fmt::Formatter| write!(f, "Zip(level: {:?})", cfg.level),
+        push_desc: "Compress the file/folder before uploading",
+        pull_desc: "Extract the file/folder after downloading",
     },
     Backup {
         config: BackupHookConfig,
         hook: BackupHook,
         enum_type: Hooks::Backup,
         modifies_name: false,
-        display: |cfg: &BackupHookConfig, f: &mut std::fmt::Formatter| write!(f, "Backup(replicas: {})", cfg.replicas)
+        display: |cfg: &BackupHookConfig, f: &mut std::fmt::Formatter| write!(f, "Backup(replicas: {})", cfg.replicas),
+        push_desc: "Create a backup copy on Local/Remote",
+        pull_desc: "Create a backup copy on Local/Remote",
     }
 }
