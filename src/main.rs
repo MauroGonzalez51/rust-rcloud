@@ -11,7 +11,7 @@ use crate::{
         parser::{Cli, Commands},
     },
     config::prelude::*,
-    utils::logger::LOG,
+    utils::prelude::{directories, logger},
 };
 use anyhow::Context;
 use clap::{CommandFactory, Parser};
@@ -40,21 +40,18 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
     let args = Cli::parse();
 
     if args.global.debug {
-        LOG.set_level(utils::logger::LogLevel::Debug);
+        logger().set_level(utils::logger::LogLevel::Debug);
     }
-
-    let system_root =
-        utils::config_path::get_default_config_path().context("failed to get app config path")?;
 
     let config_path = args
         .global
         .config
         .clone()
-        .unwrap_or_else(|| system_root.join("rcloud.toml"));
+        .unwrap_or_else(|| directories().config_dir.join("rcloud.toml"));
 
     let app_config = AppConfig::load(&config_path).unwrap_or_else(|e| {
         if args.global.config.is_none() || config_path.exists() {
-            LOG.warn(format!("could not load config file: {}", e));
+            logger().warn(format!("could not load config file: {}", e));
         }
 
         AppConfig::default()
@@ -64,7 +61,7 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
         .global
         .registry
         .clone()
-        .unwrap_or_else(|| system_root.join("registry.json"));
+        .unwrap_or_else(|| directories().config_dir.join("registry.json"));
 
     if registry_path.is_dir() {
         anyhow::bail!("registry must be a file: {}", registry_path.display());
@@ -194,7 +191,7 @@ fn main() {
     }
 
     if let Err(err) = run() {
-        LOG.with_context(&err);
+        logger().with_context(&err);
         std::process::exit(1);
     }
 }
