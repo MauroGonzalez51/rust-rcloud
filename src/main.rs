@@ -1,6 +1,7 @@
 mod cli;
 mod config;
 mod hooks;
+mod tui;
 mod utils;
 
 use crate::{
@@ -71,111 +72,114 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
     let Cli { global, command } = args;
 
     match &command {
-        Commands::Remote { action } => match action {
-            cli::commands::remote::command::RemoteCommand::List => {
-                remote_list(command_context!(app_config, global, registry));
-            }
+        Some(cmd) => match cmd {
+            Commands::Remote { action } => match action {
+                cli::commands::remote::command::RemoteCommand::List => {
+                    remote_list(command_context!(app_config, global, registry));
+                }
 
-            cli::commands::remote::command::RemoteCommand::Add { name, provider } => {
-                remote_add(command_context!(
-                    app_config,
-                    global,
-                    registry,
-                    RemoteAddArgs { name, provider }
-                ))?
-            }
+                cli::commands::remote::command::RemoteCommand::Add { name, provider } => {
+                    remote_add(command_context!(
+                        app_config,
+                        global,
+                        registry,
+                        RemoteAddArgs { name, provider }
+                    ))?
+                }
 
-            cli::commands::remote::command::RemoteCommand::Remove { id } => remote_remove(
-                command_context!(app_config, global, registry, RemoteRemoveArgs { id }),
-            )?,
+                cli::commands::remote::command::RemoteCommand::Remove { id } => remote_remove(
+                    command_context!(app_config, global, registry, RemoteRemoveArgs { id }),
+                )?,
 
-            cli::commands::remote::command::RemoteCommand::Update { id, name, provider } => {
-                remote_update(command_context!(
-                    app_config,
-                    global,
-                    registry,
-                    RemoteUpdateArgs { id, name, provider }
-                ))?
-            }
+                cli::commands::remote::command::RemoteCommand::Update { id, name, provider } => {
+                    remote_update(command_context!(
+                        app_config,
+                        global,
+                        registry,
+                        RemoteUpdateArgs { id, name, provider }
+                    ))?
+                }
 
-            cli::commands::remote::command::RemoteCommand::Ls { path, path_config } => {
-                remote_ls(command_context!(
-                    app_config,
-                    global,
-                    registry,
-                    RemoteLsArgs { path, path_config }
-                ))?
-            }
-        },
+                cli::commands::remote::command::RemoteCommand::Ls { path, path_config } => {
+                    remote_ls(command_context!(
+                        app_config,
+                        global,
+                        registry,
+                        RemoteLsArgs { path, path_config }
+                    ))?
+                }
+            },
 
-        Commands::Path { action } => match action {
-            cli::commands::path::command::PathCommand::List => {
-                path_list(command_context!(app_config, global, registry));
-            }
+            Commands::Path { action } => match action {
+                cli::commands::path::command::PathCommand::List => {
+                    path_list(command_context!(app_config, global, registry));
+                }
 
-            cli::commands::path::command::PathCommand::Add {
-                remote_id,
-                local_path,
-                remote_path,
-            } => path_add(command_context!(
-                app_config,
-                global,
-                registry,
-                PathAddArgs {
+                cli::commands::path::command::PathCommand::Add {
                     remote_id,
                     local_path,
-                    remote_path
-                }
-            ))?,
-
-            cli::commands::path::command::PathCommand::Remove { id } => path_remove(
-                command_context!(app_config, global, registry, PathRemoveArgs { path_id: id }),
-            )?,
-        },
-
-        Commands::Sync { action } => match action {
-            cli::commands::sync::command::SyncCommand::All {
-                tags,
-                force_all,
-                clean_all,
-            } => sync_all(command_context!(
-                app_config,
-                global,
-                registry,
-                SyncAllArgs {
-                    tags,
-                    force_all,
-                    clean_all
-                }
-            ))?,
-
-            cli::commands::sync::command::SyncCommand::Path {
-                direction,
-                path_id,
-                force,
-                clean,
-            } => {
-                sync_single(command_context!(
+                    remote_path,
+                } => path_add(command_context!(
                     app_config,
                     global,
                     registry,
-                    SyncSingleArgs {
-                        direction,
-                        path_id,
-                        force,
-                        clean
+                    PathAddArgs {
+                        remote_id,
+                        local_path,
+                        remote_path
                     }
-                ))?;
+                ))?,
+
+                cli::commands::path::command::PathCommand::Remove { id } => path_remove(
+                    command_context!(app_config, global, registry, PathRemoveArgs { path_id: id }),
+                )?,
+            },
+
+            Commands::Sync { action } => match action {
+                cli::commands::sync::command::SyncCommand::All {
+                    tags,
+                    force_all,
+                    clean_all,
+                } => sync_all(command_context!(
+                    app_config,
+                    global,
+                    registry,
+                    SyncAllArgs {
+                        tags,
+                        force_all,
+                        clean_all
+                    }
+                ))?,
+
+                cli::commands::sync::command::SyncCommand::Path {
+                    direction,
+                    path_id,
+                    force,
+                    clean,
+                } => {
+                    sync_single(command_context!(
+                        app_config,
+                        global,
+                        registry,
+                        SyncSingleArgs {
+                            direction,
+                            path_id,
+                            force,
+                            clean
+                        }
+                    ))?;
+                }
+            },
+
+            Commands::Configure => configure_setup(command_context!(app_config, global, registry))?,
+
+            Commands::Completion { shell } => {
+                let mut cmd = Cli::command();
+                generate(*shell, &mut cmd, "rcloud", &mut io::stdout());
+                return Ok(());
             }
         },
-
-        Commands::Configure => configure_setup(command_context!(app_config, global, registry))?,
-
-        Commands::Completion { shell } => {
-            let mut cmd = Cli::command();
-            generate(*shell, &mut cmd, "rcloud", &mut io::stdout());
-            return Ok(());
-        }
+        None => tui::run(command_context!(app_config, global, registry))?,
     }
 
     Ok(())
