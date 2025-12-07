@@ -67,18 +67,13 @@ impl From<Cli> for GlobalParameters {
 }
 
 #[derive(Debug, Parser)]
-#[command(
-    author,
-    version,
-    about = "rust-rcloud CLI",
-    arg_required_else_help = true
-)]
+#[command(author, version, about = "rust-rcloud CLI")]
 pub struct Cli {
     #[command(flatten)]
     pub global: GlobalParameters,
 
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
 }
 
 #[derive(Debug, Subcommand)]
