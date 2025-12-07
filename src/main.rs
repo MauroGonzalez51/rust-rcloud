@@ -3,8 +3,6 @@ mod config;
 mod hooks;
 mod utils;
 
-use std::io;
-
 use crate::{
     cli::{
         context::CommandContext,
@@ -17,6 +15,7 @@ use anyhow::Context;
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
 use dotenvy::dotenv;
+use std::io;
 
 use_handlers! {
     simple: {
