@@ -179,7 +179,7 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                 return Ok(());
             }
         },
-        None => tui::run(command_context!(app_config, global, registry))?,
+        None => tui::run::run_tui(command_context!(app_config, global, registry))?,
     }
 
     Ok(())
