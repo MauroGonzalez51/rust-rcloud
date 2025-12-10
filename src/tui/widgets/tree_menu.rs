@@ -19,6 +19,32 @@ impl<T: Clone + PartialEq + std::fmt::Display> TreeMenu<T> {
     }
 }
 
+impl<T: Clone + PartialEq + std::fmt::Display> TreeMenu<T> {
+    fn layout(
+        &self,
+        area: &layout::Rect,
+        parent: &Option<TreeNodeRef<T>>,
+    ) -> std::rc::Rc<[layout::Rect]> {
+        match parent {
+            Some(_) => layout::Layout::default()
+                .direction(layout::Direction::Horizontal)
+                .constraints([
+                    layout::Constraint::Percentage(30),
+                    layout::Constraint::Percentage(30),
+                    layout::Constraint::Percentage(40),
+                ])
+                .split(*area),
+            None => layout::Layout::default()
+                .direction(layout::Direction::Horizontal)
+                .constraints([
+                    layout::Constraint::Percentage(60),
+                    layout::Constraint::Percentage(40),
+                ])
+                .split(*area),
+        }
+    }
+}
+
 impl<T: Clone + PartialEq + std::fmt::Display> ratatui::widgets::StatefulWidget for TreeMenu<T> {
     type State = T;
 
@@ -32,8 +58,6 @@ impl<T: Clone + PartialEq + std::fmt::Display> ratatui::widgets::StatefulWidget 
             log_warn!("current node not found in tree");
             return;
         };
-
-        let has_parent = current.borrow().parent().is_some();
 
         let previous_items: Vec<ListItem> = current
             .borrow()
@@ -84,58 +108,32 @@ impl<T: Clone + PartialEq + std::fmt::Display> ratatui::widgets::StatefulWidget 
 
         let border_style = Style::default().fg(Color::DarkGray);
 
-        match has_parent {
-            true => {
-                let layout = layout::Layout::default()
-                    .direction(layout::Direction::Horizontal)
-                    .constraints([
-                        layout::Constraint::Percentage(30),
-                        layout::Constraint::Percentage(30),
-                        layout::Constraint::Percentage(40),
-                    ])
-                    .split(area);
+        let layout = self.layout(&area, &current.borrow().parent());
 
-                Widget::render(
-                    List::new(previous_items).block(Block::default().borders(Borders::ALL)),
-                    layout[0],
-                    buf,
-                );
+        let current_items_widget = List::new(current_items)
+            .block(Block::default().borders(Borders::ALL))
+            .style(border_style);
 
-                Widget::render(
-                    List::new(current_items).block(Block::default().borders(Borders::ALL)),
-                    layout[1],
-                    buf,
-                );
+        let previous_items_widget = List::new(previous_items)
+            .block(Block::default().borders(Borders::ALL))
+            .style(border_style);
 
-                Widget::render(
-                    Paragraph::new("Execution")
-                        .block(Block::default().borders(Borders::ALL).title("Exec")),
-                    layout[2],
-                    buf,
-                );
+        let execution_widget = Paragraph::new("Execution")
+            .block(Block::default().borders(Borders::ALL).title("Exec"))
+            .style(border_style);
+
+        match current.borrow().parent() {
+            Some(_) => {
+                Widget::render(previous_items_widget, layout[0], buf);
+
+                Widget::render(current_items_widget, layout[1], buf);
+
+                Widget::render(execution_widget, layout[2], buf);
             }
-            false => {
-                let layout = layout::Layout::default()
-                    .direction(layout::Direction::Horizontal)
-                    .constraints([
-                        layout::Constraint::Percentage(40),
-                        layout::Constraint::Percentage(60),
-                    ])
-                    .split(area);
+            None => {
+                Widget::render(current_items_widget, layout[0], buf);
 
-                Widget::render(
-                    List::new(previous_items)
-                        .block(Block::default().borders(Borders::ALL).title("Previous")),
-                    layout[0],
-                    buf,
-                );
-
-                Widget::render(
-                    List::new(current_items)
-                        .block(Block::default().borders(Borders::ALL).title("Current")),
-                    layout[1],
-                    buf,
-                );
+                Widget::render(execution_widget, layout[2], buf);
             }
         }
     }
