@@ -1,7 +1,7 @@
 use crate::tui::utils::prelude::{TreeBuilder, TreeNodeRef};
 
 #[derive(Clone, Debug, PartialEq)]
-enum RootMenu {
+pub enum RootMenu {
     Root(RootMenuVariant),
     Path(PathMenuVariant),
     Remote(RemoteMenuVariant),
@@ -10,18 +10,18 @@ enum RootMenu {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum RootMenuOptions {
+pub enum RootMenuOptions {
     Exit,
     GoBack,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum RootMenuVariant {
+pub enum RootMenuVariant {
     Placeholder,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum PathMenuVariant {
+pub enum PathMenuVariant {
     Placeholder,
     List,
     Add,
@@ -29,7 +29,7 @@ enum PathMenuVariant {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum RemoteMenuVariant {
+pub enum RemoteMenuVariant {
     Placeholder,
     List,
     Ls,
@@ -39,7 +39,7 @@ enum RemoteMenuVariant {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum SyncMenuVariant {
+pub enum SyncMenuVariant {
     Placeholder,
     Single,
     All,
@@ -80,5 +80,17 @@ impl From<RootMenu> for TreeNodeRef<RootMenu> {
             )
             .child(TreeBuilder::new(RootMenu::Options(RootMenuOptions::Exit)))
             .build()
+    }
+}
+
+impl std::fmt::Display for RootMenu {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RootMenu::Root(_) => write!(f, "Root"),
+            RootMenu::Path(v) => write!(f, "Path::{:?}", v),
+            RootMenu::Remote(v) => write!(f, "Remote::{:?}", v),
+            RootMenu::Sync(v) => write!(f, "Sync::{:?}", v),
+            RootMenu::Options(v) => write!(f, "{:?}", v),
+        }
     }
 }
