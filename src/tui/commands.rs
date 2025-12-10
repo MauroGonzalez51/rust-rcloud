@@ -86,11 +86,32 @@ impl From<RootMenu> for TreeNodeRef<RootMenu> {
 impl std::fmt::Display for RootMenu {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RootMenu::Root(_) => write!(f, "Root"),
-            RootMenu::Path(v) => write!(f, "Path::{:?}", v),
-            RootMenu::Remote(v) => write!(f, "Remote::{:?}", v),
-            RootMenu::Sync(v) => write!(f, "Sync::{:?}", v),
-            RootMenu::Options(v) => write!(f, "{:?}", v),
+            RootMenu::Root(variant) => match variant {
+                RootMenuVariant::Placeholder => write!(f, "Main Menu"),
+            },
+            RootMenu::Path(variant) => match variant {
+                PathMenuVariant::Placeholder => write!(f, "Path Menu"),
+                PathMenuVariant::List => write!(f, "List Paths"),
+                PathMenuVariant::Add => write!(f, "Add Path"),
+                PathMenuVariant::Remove => write!(f, "Remove Path"),
+            },
+            RootMenu::Remote(variant) => match variant {
+                RemoteMenuVariant::Placeholder => write!(f, "Remote Menu"),
+                RemoteMenuVariant::List => write!(f, "List Remote"),
+                RemoteMenuVariant::Ls => write!(f, "List files in a given Path (Remote)"),
+                RemoteMenuVariant::Add => write!(f, "Add Remote"),
+                RemoteMenuVariant::Update => write!(f, "Update Remote Information"),
+                RemoteMenuVariant::Remove => write!(f, "Remove a Configured Remote"),
+            },
+            RootMenu::Sync(variant) => match variant {
+                SyncMenuVariant::Placeholder => write!(f, "Sync Menu"),
+                SyncMenuVariant::Single => write!(f, "Sync Path"),
+                SyncMenuVariant::All => write!(f, "Sync ALL paths that matches tags"),
+            },
+            RootMenu::Options(variant) => match variant {
+                RootMenuOptions::GoBack => write!(f, "Go Back"),
+                RootMenuOptions::Exit => write!(f, "Exit"),
+            },
         }
     }
 }
