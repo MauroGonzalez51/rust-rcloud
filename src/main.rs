@@ -10,7 +10,7 @@ use crate::{
         parser::{Cli, Commands},
     },
     config::prelude::*,
-    utils::prelude::{directories, logger},
+    utils::prelude::{Logger, directories, logger},
 };
 use anyhow::Context;
 use clap::{CommandFactory, Parser};
@@ -38,6 +38,8 @@ use_handlers! {
 
 fn run() -> anyhow::Result<(), anyhow::Error> {
     let args = Cli::parse();
+
+    Logger::setup(directories().config_dir.join("rcloud.log"))?;
 
     if args.global.debug {
         logger().set_level(utils::logger::LogLevel::Debug);

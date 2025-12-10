@@ -30,6 +30,7 @@ impl<T: Clone> TreeNode<T> {
 }
 
 pub enum TreeNodeGetBy<T> {
+    #[allow(dead_code)]
     Index(usize),
     Value(T),
 }

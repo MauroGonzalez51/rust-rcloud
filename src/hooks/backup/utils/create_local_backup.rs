@@ -13,10 +13,7 @@ pub fn create_local_backup(
             .with_context(|| format!("failed to create backup directory: {:?}", directory))?;
     }
 
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .context("failed to get timestap")?
-        .as_secs();
+    let timestamp = chrono::Utc::now().timestamp();
 
     let backup_path = directory.join(format!("{}.{}", timestamp, replica_number));
 
