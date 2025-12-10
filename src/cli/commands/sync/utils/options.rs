@@ -71,28 +71,25 @@ pub fn force(
 ) -> ForceResult {
     match direction {
         HookExecType::Push => {
-            if !force {
-                if let Some(stored_hash) = &path_config.hash {
-                    if stored_hash == processed_hash {
-                        return ForceResult::HashMatch;
-                    }
-                }
+            if !force
+                && let Some(stored_hash) = &path_config.hash
+                && stored_hash == processed_hash
+            {
+                return ForceResult::HashMatch;
             }
 
             ForceResult::Proceed
         }
         HookExecType::Pull => {
-            if !force {
-                if let Some(stored_hash) = &path_config.hash {
-                    let local_path_exists = std::path::Path::new(&path_config.local_path).exists();
+            if !force && let Some(stored_hash) = &path_config.hash {
+                let local_path_exists = std::path::Path::new(&path_config.local_path).exists();
 
-                    if stored_hash == processed_hash {
-                        if local_path_exists {
-                            return ForceResult::HashMatch;
-                        }
-
-                        return ForceResult::PathNotFound;
+                if stored_hash == processed_hash {
+                    if local_path_exists {
+                        return ForceResult::HashMatch;
                     }
+
+                    return ForceResult::PathNotFound;
                 }
             }
 

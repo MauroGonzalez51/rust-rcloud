@@ -1,2 +1,2 @@
 pub use super::directories::directories;
-pub use super::logger::logger;
+pub use super::logger::{Logger, logger};

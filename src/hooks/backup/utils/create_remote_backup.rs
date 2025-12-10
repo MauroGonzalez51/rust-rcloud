@@ -6,10 +6,7 @@ pub fn create_remote_backup(
     remote_path: &str,
     replica_number: u32,
 ) -> anyhow::Result<()> {
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .context("failed to get timestamp")?
-        .as_secs();
+    let timestamp = chrono::Utc::now().timestamp();
 
     log_debug!("creating remote backup");
 

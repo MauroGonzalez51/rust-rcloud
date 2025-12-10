@@ -1,5 +1,14 @@
+use anyhow::Context;
 use console::Style;
-use std::sync::RwLock;
+use crossterm::terminal;
+use std::{
+    io::Write,
+    sync::{Mutex, OnceLock, RwLock},
+};
+
+const LOG_ROTATE_BYTES: u64 = 5 * 1024 * 1024;
+
+static LOG_FILE: OnceLock<(Mutex<std::fs::File>, std::path::PathBuf)> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
@@ -33,6 +42,20 @@ impl Default for Logger {
 }
 
 impl Logger {
+    pub fn setup(path: impl AsRef<std::path::Path>) -> anyhow::Result<()> {
+        let path = path.as_ref().to_path_buf();
+
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .context("failed to setup logger")?;
+
+        let _ = LOG_FILE.set((Mutex::new(file), path));
+
+        Ok(())
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -47,37 +70,101 @@ impl Logger {
         self.level.read().map(|l| *l).unwrap_or(LogLevel::Info)
     }
 
+    fn rotate(&self, mutex: &std::sync::Mutex<std::fs::File>, path: &std::path::Path) {
+        if let Ok(meta) = mutex.lock().unwrap().metadata()
+            && meta.len() <= LOG_ROTATE_BYTES
+        {
+            return;
+        }
+
+        drop(mutex.lock().unwrap());
+
+        let rotated = path.with_extension(format!(
+            "{}.{}",
+            path.extension().and_then(|e| e.to_str()).unwrap_or("log"),
+            chrono::Utc::now().format("%Y%m%dT%H%M%SZ")
+        ));
+
+        let _ = std::fs::rename(path, &rotated);
+
+        if let Ok(file) = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(path)
+            && let Ok(mut guard) = mutex.lock()
+        {
+            *guard = file;
+        }
+    }
+
+    fn write_file(&self, line: &str) {
+        if let Some((mutex, path)) = LOG_FILE.get() {
+            self.rotate(mutex, path);
+            let _ = writeln!(mutex.lock().unwrap(), "{} / {}", chrono::Utc::now(), line);
+        }
+    }
+
     fn should_log(&self, level: LogLevel) -> bool {
         level >= self.get_level()
     }
 
+    fn should_print(&self) -> bool {
+        !terminal::is_raw_mode_enabled().unwrap_or(true)
+    }
+
     pub fn error(&self, msg: impl std::fmt::Display) {
-        if self.should_log(LogLevel::Error) {
-            eprintln!("{}", self.error.apply_to(format!("[ ERROR ] {msg}")))
+        if !self.should_log(LogLevel::Error) {
+            return;
+        }
+        let plain = format!("[ ERROR ] {msg}");
+        self.write_file(&plain);
+        if self.should_print() {
+            eprintln!("{}", self.error.apply_to(&plain));
         }
     }
 
     pub fn warn(&self, msg: impl std::fmt::Display) {
-        if self.should_log(LogLevel::Warn) {
-            eprintln!("{}", self.warn.apply_to(format!("[ WARN ] {msg}")))
+        if !self.should_log(LogLevel::Warn) {
+            return;
+        }
+        let plain = format!("[ WARN ] {msg}");
+        self.write_file(&plain);
+        if self.should_print() {
+            eprintln!("{}", self.warn.apply_to(&plain));
         }
     }
 
     pub fn info(&self, msg: impl std::fmt::Display) {
-        if self.should_log(LogLevel::Info) {
-            println!("{}", self.info.apply_to(format!("[ INFO ] {msg}")))
+        if !self.should_log(LogLevel::Info) {
+            return;
+        }
+        let plain = format!("[ INFO ] {msg}");
+        self.write_file(&plain);
+        if self.should_print() {
+            println!("{}", self.info.apply_to(&plain));
         }
     }
 
     pub fn success(&self, msg: impl std::fmt::Display) {
-        if self.should_log(LogLevel::Success) {
-            println!("{}", self.success.apply_to(format!("[ SUCCESS ] {msg}")))
+        if !self.should_log(LogLevel::Success) {
+            return;
+        }
+        let plain = format!("[ SUCCESS ] {msg}");
+        self.write_file(&plain);
+        if self.should_print() {
+            println!("{}", self.success.apply_to(&plain));
         }
     }
 
     pub fn debug(&self, msg: impl std::fmt::Display) {
-        if self.should_log(LogLevel::Debug) {
-            println!("{}", self.debug.apply_to(format!("[ DEBUG ] {msg}")))
+        if !self.should_log(LogLevel::Debug) {
+            return;
+        }
+        let plain = format!("[ DEBUG ] {msg}");
+        self.write_file(&plain);
+        if self.should_print() {
+            println!("{}", self.debug.apply_to(&plain));
         }
     }
 

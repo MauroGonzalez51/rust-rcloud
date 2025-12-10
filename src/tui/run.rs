@@ -2,7 +2,7 @@ use crate::{
     cli::context::CommandContext,
     tui::{
         commands::{RootMenu, RootMenuVariant},
-        utils::prelude::TreeNodeRef,
+        utils::prelude::{TreeNodeGetBy, TreeNodeOperations, TreeNodeRef},
         widgets::tree_menu::TreeMenu,
     },
 };
@@ -11,6 +11,7 @@ use ratatui::{
     prelude::{CrosstermBackend, Terminal},
     widgets::StatefulWidget,
 };
+use rcloud::log_warn;
 
 pub fn run_tui(_context: CommandContext) -> anyhow::Result<()> {
     terminal::enable_raw_mode()?;
@@ -23,8 +24,7 @@ pub fn run_tui(_context: CommandContext) -> anyhow::Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let tree: TreeNodeRef<RootMenu> = RootMenu::Root(RootMenuVariant::Placeholder).into();
-    let mut current = tree.clone();
-    let mut state = current.borrow().value.clone();
+    let mut state = tree.borrow().value.clone();
     let mut selected: usize = 0;
 
     loop {
@@ -34,6 +34,18 @@ pub fn run_tui(_context: CommandContext) -> anyhow::Result<()> {
         })?;
 
         if let event::Event::Key(k) = event::read()? {
+            if k.kind != event::KeyEventKind::Press {
+                continue;
+            }
+
+            let mut current = match tree.get(TreeNodeGetBy::Value(state.clone())) {
+                Some(current) => current,
+                None => {
+                    log_warn!("current node not found for state {:?}", state);
+                    continue;
+                }
+            };
+
             match k.code {
                 event::KeyCode::Char('q') => break,
                 event::KeyCode::Char('j') | event::KeyCode::Down => {
@@ -51,11 +63,19 @@ pub fn run_tui(_context: CommandContext) -> anyhow::Result<()> {
                     }
                 }
                 event::KeyCode::Char('l') | event::KeyCode::Enter | event::KeyCode::Right => {
-                    let child = { current.borrow().children().get(selected).cloned() };
+                    let child = {
+                        let b = current.borrow();
+                        if b.children().is_empty() {
+                            None
+                        } else {
+                            b.children().get(selected).cloned()
+                        }
+                    };
+
+                    log_warn!("{:?}", child);
 
                     if let Some(new_current) = child {
-                        current = new_current;
-                        state = current.borrow().value.clone();
+                        state = new_current.borrow().value.clone();
                         selected = 0;
                     }
                 }
@@ -63,9 +83,16 @@ pub fn run_tui(_context: CommandContext) -> anyhow::Result<()> {
                     let parent = { current.borrow().parent() };
 
                     if let Some(new_parent) = parent {
+                        let new_selected = new_parent
+                            .borrow()
+                            .children()
+                            .iter()
+                            .position(|child| std::rc::Rc::ptr_eq(child, &current))
+                            .unwrap_or(0);
+
                         current = new_parent;
                         state = current.borrow().value.clone();
-                        selected = 0;
+                        selected = new_selected;
                     }
                 }
                 _ => {}

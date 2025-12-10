@@ -59,6 +59,14 @@ impl<T: Clone + PartialEq + std::fmt::Display> ratatui::widgets::StatefulWidget 
             return;
         };
 
+        let current_idx_in_parent = current.borrow().parent().as_ref().and_then(|parent| {
+            parent
+                .borrow()
+                .children()
+                .iter()
+                .position(|child| std::rc::Rc::ptr_eq(child, &current))
+        });
+
         let previous_items: Vec<ListItem> = current
             .borrow()
             .parent()
@@ -72,7 +80,7 @@ impl<T: Clone + PartialEq + std::fmt::Display> ratatui::widgets::StatefulWidget 
                     .map(|(idx, child)| {
                         let value = format!("{}", child.borrow().value);
 
-                        if idx == self.selected {
+                        if Some(idx) == current_idx_in_parent {
                             return ListItem::new(value).style(
                                 Style::default()
                                     .fg(Color::Cyan)
@@ -107,20 +115,26 @@ impl<T: Clone + PartialEq + std::fmt::Display> ratatui::widgets::StatefulWidget 
             .collect();
 
         let border_style = Style::default().fg(Color::DarkGray);
+        let text_style = Style::default().fg(Color::White);
 
         let layout = self.layout(&area, &current.borrow().parent());
 
         let current_items_widget = List::new(current_items)
-            .block(Block::default().borders(Borders::ALL))
-            .style(border_style);
+            .block(Block::default().borders(Borders::ALL).style(border_style))
+            .style(text_style);
 
         let previous_items_widget = List::new(previous_items)
-            .block(Block::default().borders(Borders::ALL))
-            .style(border_style);
+            .block(Block::default().borders(Borders::ALL).style(border_style))
+            .style(text_style);
 
         let execution_widget = Paragraph::new("Execution")
-            .block(Block::default().borders(Borders::ALL).title("Exec"))
-            .style(border_style);
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Exec")
+                    .style(border_style),
+            )
+            .style(Style::default().fg(Color::Gray));
 
         match current.borrow().parent() {
             Some(_) => {
@@ -133,7 +147,7 @@ impl<T: Clone + PartialEq + std::fmt::Display> ratatui::widgets::StatefulWidget 
             None => {
                 Widget::render(current_items_widget, layout[0], buf);
 
-                Widget::render(execution_widget, layout[2], buf);
+                Widget::render(execution_widget, layout[1], buf);
             }
         }
     }
