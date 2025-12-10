@@ -1,5 +1,6 @@
 use crate::{
     cli::context::CommandContext,
+    log_warn,
     tui::{
         commands::{RootMenu, RootMenuVariant},
         utils::prelude::{TreeNodeGetBy, TreeNodeOperations, TreeNodeRef},
@@ -11,7 +12,6 @@ use ratatui::{
     prelude::{CrosstermBackend, Terminal},
     widgets::StatefulWidget,
 };
-use rcloud::log_warn;
 
 pub fn run_tui(_context: CommandContext) -> anyhow::Result<()> {
     terminal::enable_raw_mode()?;
@@ -63,20 +63,18 @@ pub fn run_tui(_context: CommandContext) -> anyhow::Result<()> {
                     }
                 }
                 event::KeyCode::Char('l') | event::KeyCode::Enter | event::KeyCode::Right => {
-                    let child = {
-                        let b = current.borrow();
-                        if b.children().is_empty() {
-                            None
-                        } else {
-                            b.children().get(selected).cloned()
+                    let child = { current.borrow().children().get(selected).cloned() };
+
+                    if let Some(selected_node) = child {
+                        if !selected_node.borrow().children().is_empty() {
+                            state = selected_node.borrow().value.clone();
+                            selected = 0;
+                            continue;
                         }
-                    };
 
-                    log_warn!("{:?}", child);
-
-                    if let Some(new_current) = child {
-                        state = new_current.borrow().value.clone();
-                        selected = 0;
+                        // TODO: handle action here
+                        let action = selected_node.borrow().value.clone();
+                        log_warn!("execute action: {:?}", action);
                     }
                 }
                 event::KeyCode::Char('h') | event::KeyCode::Left => {
