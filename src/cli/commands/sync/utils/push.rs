@@ -74,7 +74,7 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
 
     log_debug!("final_name: {:?}", final_name);
 
-    let final_path = match PathBuf::from(&options.paths.path_config.local_path) == context.path {
+    let final_path = match options.paths.path_config.local_path == context.path {
         true => {
             log_debug!("path unchanged, using original");
             PathBuf::from(&options.paths.path_config.local_path)

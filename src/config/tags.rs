@@ -45,11 +45,10 @@ impl TagOption {
                 .iter()
                 .enumerate()
                 .filter_map(|(i, tag)| {
-                    if let TagOption::Existing(t) = tag {
-                        if selected_tags.contains(t) {
+                    if let TagOption::Existing(t) = tag
+                        && selected_tags.contains(t) {
                             return Some(i);
                         }
-                    }
 
                     None
                 })
@@ -65,11 +64,10 @@ impl TagOption {
             selected_tags.clear();
 
             for selection in &selections {
-                if let TagOption::Existing(tag) = selection {
-                    if !selected_tags.contains(tag) {
+                if let TagOption::Existing(tag) = selection
+                    && !selected_tags.contains(tag) {
                         selected_tags.push(tag.clone());
                     }
-                }
             }
 
             if selections.contains(&TagOption::AddNew) {
