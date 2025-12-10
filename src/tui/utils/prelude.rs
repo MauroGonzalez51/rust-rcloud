@@ -1,1 +1,1 @@
-pub use super::tree::{TreeBuilder, TreeNodeRef};
+pub use super::tree::{TreeBuilder, TreeNodeOperations, TreeNodeRef, TreeNodeGetBy};
