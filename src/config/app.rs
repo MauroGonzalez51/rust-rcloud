@@ -34,15 +34,15 @@ impl AppConfig {
     }
 
     fn create_default_config(path: &PathBuf) -> anyhow::Result<()> {
-        if let Some(parent) = path.parent()
-            && !parent.exists()
-        {
-            std::fs::create_dir_all(parent).with_context(|| {
-                format!(
-                    "failed to create parent directory for path: {}",
-                    path.display()
-                )
-            })?;
+        if let Some(parent) = path.parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(parent).with_context(|| {
+                    format!(
+                        "failed to create parent directory for path: {}",
+                        path.display()
+                    )
+                })?;
+            }
         }
 
         let file = Asset::get("default_config.toml").context("default_config does not exists")?;

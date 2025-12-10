@@ -38,11 +38,11 @@ impl ZipHook {
                 .strip_prefix(path)
                 .context("failed to build relative path")?;
 
-            if let Some(set) = exclude_set
-                && set.is_match(relative_path)
-            {
-                log_info!("excluding: {:?}", relative_path);
-                continue;
+            if let Some(set) = exclude_set {
+                if set.is_match(relative_path) {
+                    log_info!("excluding: {}", relative_path.display());
+                    continue;
+                }
             }
 
             let file_content = fs::read(entry.path())
