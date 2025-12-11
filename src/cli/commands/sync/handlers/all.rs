@@ -4,6 +4,7 @@ use crate::{
 };
 use anyhow::Context;
 
+#[derive(Clone)]
 pub struct LocalArgs<'a> {
     pub tags: &'a [String],
     pub force_all: &'a bool,
@@ -14,8 +15,14 @@ pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     log_debug!("using tags: {:?}", context.local.tags);
 
     let matching_paths_ids: Vec<String> = match context.local.tags.is_empty() {
-        true => context.paths.iter().map(|p| p.id.clone()).collect(),
+        true => context
+            .registry
+            .paths
+            .iter()
+            .map(|p| p.id.clone())
+            .collect(),
         false => context
+            .registry
             .paths
             .iter()
             .filter(|p| p.tags.iter().any(|t| context.local.tags.contains(t)))
@@ -27,6 +34,7 @@ pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
 
     for path_id in matching_paths_ids {
         let path_info = context
+            .registry
             .paths
             .iter()
             .find(|p| p.id == path_id)

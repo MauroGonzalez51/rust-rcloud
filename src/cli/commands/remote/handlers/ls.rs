@@ -8,6 +8,7 @@ fn execute_rclone(rclone_path: &str, path: &str) -> anyhow::Result<std::process:
         .with_context(|| format!("failed to execute rclone ls {}", path))
 }
 
+#[derive(Clone)]
 pub struct LocalArgs<'a> {
     pub path: &'a Option<String>,
     pub path_config: &'a Option<String>,
@@ -31,12 +32,14 @@ pub fn remote_ls(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     };
 
     let path_config = context
+        .registry
         .paths
         .iter()
         .find(|p| p.id == *path_id)
         .ok_or_else(|| anyhow::anyhow!("path does not exists"))?;
 
     let remote_config = context
+        .registry
         .remotes
         .iter()
         .find(|r| r.id == *path_config.remote_id)

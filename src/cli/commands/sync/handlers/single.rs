@@ -9,6 +9,7 @@ use crate::{
 
 use anyhow::Context;
 
+#[derive(Clone)]
 pub struct LocalArgs<'a> {
     pub direction: &'a Option<HookExecType>,
     pub path_id: &'a Option<String>,
@@ -39,6 +40,7 @@ pub fn sync_single(
     };
 
     let path_config = context
+        .registry
         .paths
         .iter()
         .find(|p| p.id == path_id)
@@ -46,6 +48,7 @@ pub fn sync_single(
         .clone();
 
     let remote_config = context
+        .registry
         .remotes
         .iter()
         .find(|r| r.id == path_config.remote_id)

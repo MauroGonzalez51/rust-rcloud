@@ -4,6 +4,7 @@ use crate::{
 };
 use anyhow::Context;
 
+#[derive(Clone)]
 pub struct LocalArgs<'a> {
     pub id: &'a Option<String>,
     pub name: &'a Option<String>,
@@ -11,14 +12,14 @@ pub struct LocalArgs<'a> {
 }
 
 pub fn remote_update(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
-    if context.remotes.is_empty() {
+    if context.registry.remotes.is_empty() {
         log_warn!("no remotes configured");
         return Ok(());
     }
 
     let remote_info = match context.local.id {
         Some(value) => {
-            if !context.remotes.iter().any(|r| r.id == *value) {
+            if !context.registry.remotes.iter().any(|r| r.id == *value) {
                 anyhow::bail!("remote with id '{}' not found", value);
             }
 
@@ -53,6 +54,7 @@ pub fn remote_update(mut context: CommandContext<LocalArgs>) -> anyhow::Result<(
     };
 
     context
+        .registry
         .tx(|rgx| {
             if let Some(remote) = rgx.remotes.iter_mut().find(|r| r.id == *remote_info.id) {
                 log_info!("found remote to update");

@@ -16,7 +16,7 @@ pub fn remote_list(context: CommandContext) {
         )
     }
 
-    for (i, remote) in context.remotes.iter().enumerate() {
+    for (i, remote) in context.registry.remotes.iter().enumerate() {
         println!(
             "> {}. {} ({}) [id: {}]",
             i + 1,
