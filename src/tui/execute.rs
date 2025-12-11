@@ -1,7 +1,9 @@
 use crate::{
     cli::context::CommandContext,
     command_context,
-    tui::commands::{PathMenuVariant, RootMenu, RootMenuOptions},
+    tui::commands::{
+        PathMenuVariant, RemoteMenuVariant, RootMenu, RootMenuOptions, SyncMenuVariant,
+    },
     use_handlers,
 };
 use crossterm::{execute, terminal};
@@ -12,7 +14,18 @@ pub enum ExecutePostOperation {
 
 use_handlers! {
     simple: {
-        (path, list)
+        (path, list),
+        (remote, list),
+    },
+    with_args: {
+        (path, add),
+        (path, remove),
+        (remote, ls),
+        (remote, add),
+        (remote, remove),
+        (remote, update),
+        (sync, single),
+        (sync, all)
     }
 }
 
@@ -28,7 +41,6 @@ pub fn execute(context: CommandContext, action: &RootMenu) -> anyhow::Result<Exe
 
                 std::process::exit(0)
             }
-            _ => todo!(),
         },
         RootMenu::Path(variant) => match variant {
             PathMenuVariant::List => {
@@ -37,11 +49,88 @@ pub fn execute(context: CommandContext, action: &RootMenu) -> anyhow::Result<Exe
                     context.global,
                     context.registry
                 ));
-
-                Ok(ExecutePostOperation::None)
             }
-            _ => todo!(),
+            PathMenuVariant::Add => {
+                path_add(command_context!(
+                    context.config,
+                    context.global,
+                    context.registry,
+                    PathAddArgs::default()
+                ))?;
+            }
+            PathMenuVariant::Remove => {
+                path_remove(command_context!(
+                    context.config,
+                    context.global,
+                    context.registry,
+                    PathRemoveArgs::default()
+                ))?;
+            }
+            _ => unreachable!(),
         },
-        _ => todo!(),
+        RootMenu::Remote(variant) => match variant {
+            RemoteMenuVariant::List => {
+                remote_list(command_context!(
+                    context.config,
+                    context.global,
+                    context.registry
+                ));
+            }
+            RemoteMenuVariant::Ls => {
+                remote_ls(command_context!(
+                    context.config,
+                    context.global,
+                    context.registry,
+                    RemoteLsArgs::default()
+                ))?;
+            }
+            RemoteMenuVariant::Add => {
+                remote_add(command_context!(
+                    context.config,
+                    context.global,
+                    context.registry,
+                    RemoteAddArgs::default()
+                ))?;
+            }
+            RemoteMenuVariant::Remove => {
+                remote_remove(command_context!(
+                    context.config,
+                    context.global,
+                    context.registry,
+                    RemoteRemoveArgs::default()
+                ))?;
+            }
+            RemoteMenuVariant::Update => {
+                remote_update(command_context!(
+                    context.config,
+                    context.global,
+                    context.registry,
+                    RemoteUpdateArgs::default()
+                ))?;
+            }
+            _ => unreachable!(),
+        },
+        RootMenu::Sync(variant) => match variant {
+            SyncMenuVariant::Single => {
+                sync_single(command_context!(
+                    context.config,
+                    context.global,
+                    context.registry,
+                    SyncSingleArgs::default()
+                ))?;
+            }
+            SyncMenuVariant::All => {
+                sync_all(command_context!(
+                    context.config,
+                    context.global,
+                    context.registry,
+                    SyncAllArgs::default()
+                ))?;
+            }
+            _ => unreachable!(),
+        },
+        _ => unreachable!(),
     }
+
+    Ok(ExecutePostOperation::None)
 }

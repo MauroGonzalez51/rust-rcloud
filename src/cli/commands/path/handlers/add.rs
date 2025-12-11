@@ -16,6 +16,16 @@ pub struct LocalArgs<'a> {
     pub remote_path: &'a Option<String>,
 }
 
+impl<'a> Default for LocalArgs<'a> {
+    fn default() -> Self {
+        Self {
+            remote_id: &None,
+            local_path: &None,
+            remote_path: &None,
+        }
+    }
+}
+
 pub fn path_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     if context.registry.remotes.is_empty() {
         log_warn!("there are no remotes configured");

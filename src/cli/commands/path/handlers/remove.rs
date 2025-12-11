@@ -9,6 +9,12 @@ pub struct LocalArgs<'a> {
     pub path_id: &'a Option<String>,
 }
 
+impl<'a> Default for LocalArgs<'a> {
+    fn default() -> Self {
+        Self { path_id: &None }
+    }
+}
+
 pub fn path_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     if context.registry.paths.is_empty() {
         log_warn!("no paths configured");
