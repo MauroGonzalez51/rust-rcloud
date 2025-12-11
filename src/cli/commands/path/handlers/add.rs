@@ -9,6 +9,7 @@ use crate::{
 use anyhow::Context;
 use inquire::Confirm;
 
+#[derive(Clone)]
 pub struct LocalArgs<'a> {
     pub remote_id: &'a Option<String>,
     pub local_path: &'a Option<String>,
@@ -77,6 +78,7 @@ pub fn path_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
 
     if confirm_save {
         context
+            .registry
             .tx(|rgx| {
                 rgx.paths.push(path_config);
             })

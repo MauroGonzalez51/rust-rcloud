@@ -53,7 +53,6 @@ impl From<RootMenu> for TreeNodeRef<RootMenu> {
                     TreeBuilder::new(RootMenu::Path(PathMenuVariant::List)),
                     TreeBuilder::new(RootMenu::Path(PathMenuVariant::Add)),
                     TreeBuilder::new(RootMenu::Path(PathMenuVariant::Remove)),
-                    TreeBuilder::new(RootMenu::Options(RootMenuOptions::GoBack)),
                     TreeBuilder::new(RootMenu::Options(RootMenuOptions::Exit)),
                 ]),
             )
@@ -65,7 +64,6 @@ impl From<RootMenu> for TreeNodeRef<RootMenu> {
                         TreeBuilder::new(RootMenu::Remote(RemoteMenuVariant::Add)),
                         TreeBuilder::new(RootMenu::Remote(RemoteMenuVariant::Remove)),
                         TreeBuilder::new(RootMenu::Remote(RemoteMenuVariant::Update)),
-                        TreeBuilder::new(RootMenu::Options(RootMenuOptions::GoBack)),
                         TreeBuilder::new(RootMenu::Options(RootMenuOptions::Exit)),
                     ],
                 ),
@@ -74,7 +72,6 @@ impl From<RootMenu> for TreeNodeRef<RootMenu> {
                 TreeBuilder::new(RootMenu::Sync(SyncMenuVariant::Placeholder)).with_children(vec![
                     TreeBuilder::new(RootMenu::Sync(SyncMenuVariant::Single)),
                     TreeBuilder::new(RootMenu::Sync(SyncMenuVariant::All)),
-                    TreeBuilder::new(RootMenu::Options(RootMenuOptions::GoBack)),
                     TreeBuilder::new(RootMenu::Options(RootMenuOptions::Exit)),
                 ]),
             )

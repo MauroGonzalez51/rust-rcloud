@@ -4,12 +4,13 @@ use crate::{
 };
 use anyhow::Context;
 
+#[derive(Clone)]
 pub struct LocalArgs<'a> {
     pub path_id: &'a Option<String>,
 }
 
 pub fn path_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
-    if context.paths.is_empty() {
+    if context.registry.paths.is_empty() {
         log_warn!("no paths configured");
         return Ok(());
     }
@@ -21,6 +22,7 @@ pub fn path_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()>
     };
 
     let path = context
+        .registry
         .paths
         .iter()
         .find(|p| p.id == *path_id)
@@ -30,6 +32,7 @@ pub fn path_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()>
     log_info!("Removing path: {} -> {}", path.local_path, path.remote_path);
 
     context
+        .registry
         .tx(|rgx| {
             rgx.paths.retain(|r| r.id != path.id);
         })

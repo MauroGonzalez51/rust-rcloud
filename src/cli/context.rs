@@ -2,8 +2,8 @@ use crate::{
     cli::parser::GlobalParameters,
     config::prelude::{AppConfig, Registry},
 };
-use std::ops::{Deref, DerefMut};
 
+#[derive(Debug, Clone)]
 pub struct CommandContext<L = ()> {
     pub global: GlobalParameters,
     pub config: AppConfig,
@@ -11,7 +11,7 @@ pub struct CommandContext<L = ()> {
     pub local: L,
 }
 
-impl<L> CommandContext<L> {
+impl<L: Clone> CommandContext<L> {
     pub fn new(config: AppConfig, global: GlobalParameters, registry: Registry, local: L) -> Self {
         Self {
             config,
@@ -22,21 +22,7 @@ impl<L> CommandContext<L> {
     }
 }
 
-impl<L> Deref for CommandContext<L> {
-    type Target = Registry;
-
-    fn deref(&self) -> &Self::Target {
-        &self.registry
-    }
-}
-
-impl<L> DerefMut for CommandContext<L> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.registry
-    }
-}
-
-impl<L> From<CommandContext<L>> for Registry {
+impl<L: Clone> From<CommandContext<L>> for Registry {
     fn from(context: CommandContext<L>) -> Self {
         context.registry
     }
@@ -53,7 +39,7 @@ impl From<(AppConfig, GlobalParameters, Registry)> for CommandContext<()> {
     }
 }
 
-impl<L> From<(AppConfig, GlobalParameters, Registry, L)> for CommandContext<L> {
+impl<L: Clone> From<(AppConfig, GlobalParameters, Registry, L)> for CommandContext<L> {
     fn from((config, global, registry, local): (AppConfig, GlobalParameters, Registry, L)) -> Self {
         Self {
             config,

@@ -4,19 +4,20 @@ use crate::{
 };
 use anyhow::Context;
 
+#[derive(Clone)]
 pub struct LocalArgs<'a> {
     pub id: &'a Option<String>,
 }
 
 pub fn remote_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
-    if context.remotes.is_empty() {
+    if context.registry.remotes.is_empty() {
         log_warn!("no remotes configured");
         return Ok(());
     }
 
     let remote = match context.local.id {
         Some(value) => {
-            if !context.remotes.iter().any(|r| r.id == *value) {
+            if !context.registry.remotes.iter().any(|r| r.id == *value) {
                 anyhow::bail!("remote with '{}' not found", value);
             }
 
@@ -37,6 +38,7 @@ pub fn remote_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<(
     );
 
     context
+        .registry
         .tx(|rgx| {
             rgx.remotes.retain(|r| r.id != remote.id);
         })

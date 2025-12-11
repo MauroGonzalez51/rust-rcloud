@@ -5,61 +5,102 @@ use crate::{
 use ratatui::{
     layout,
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Widget},
+    widgets::{Block, Borders, List, ListItem, Widget},
 };
 
+#[derive(Clone)]
 pub struct TreeMenu<T: Clone + PartialEq + std::fmt::Display> {
     tree: TreeNodeRef<T>,
-    selected: usize,
+    pub selected: usize,
 }
 
 struct LayoutRects {
     current: layout::Rect,
     previous: Option<layout::Rect>,
-    exec: layout::Rect,
 }
 
 impl<T: Clone + PartialEq + std::fmt::Display> TreeMenu<T> {
-    pub fn new(tree: TreeNodeRef<T>, selected: usize) -> Self {
-        Self { tree, selected }
+    pub fn new(tree: TreeNodeRef<T>) -> Self {
+        Self { tree, selected: 0 }
     }
-}
 
-impl<T: Clone + PartialEq + std::fmt::Display> TreeMenu<T> {
     fn layout(&self, area: &layout::Rect, parent: &Option<TreeNodeRef<T>>) -> LayoutRects {
         match parent {
             Some(_) => {
                 let rects = layout::Layout::default()
                     .direction(layout::Direction::Horizontal)
                     .constraints([
-                        layout::Constraint::Percentage(30),
-                        layout::Constraint::Percentage(30),
                         layout::Constraint::Percentage(40),
+                        layout::Constraint::Percentage(60),
                     ])
                     .split(*area);
 
                 LayoutRects {
                     previous: Some(rects[0]),
                     current: rects[1],
-                    exec: rects[2],
                 }
             }
             None => {
                 let rects = layout::Layout::default()
                     .direction(layout::Direction::Horizontal)
-                    .constraints([
-                        layout::Constraint::Percentage(60),
-                        layout::Constraint::Percentage(40),
-                    ])
+                    .constraints([layout::Constraint::Percentage(100)])
                     .split(*area);
 
                 LayoutRects {
                     previous: None,
                     current: rects[0],
-                    exec: rects[1],
                 }
             }
         }
+    }
+
+    pub fn navigate_down(&mut self, current: &mut TreeNodeRef<T>) {
+        let len = current.borrow().children().len();
+
+        if len > 0 {
+            self.selected = (self.selected + 1) % len;
+        }
+    }
+
+    pub fn navigate_up(&mut self, current: &mut TreeNodeRef<T>) {
+        let len = current.borrow().children().len();
+
+        if len > 0 {
+            self.selected = (self.selected + len - 1) % len;
+        }
+    }
+
+    pub fn navigate_left(&mut self, current: &mut TreeNodeRef<T>, state: &mut T) {
+        let parent = { current.borrow().parent() };
+
+        if let Some(new_parent) = parent {
+            let new_selected = new_parent
+                .borrow()
+                .children()
+                .iter()
+                .position(|child| std::rc::Rc::ptr_eq(child, current))
+                .unwrap_or(0);
+
+            *current = new_parent;
+            *state = current.borrow().value.clone();
+            self.selected = new_selected;
+        }
+    }
+
+    pub fn navigate_right(&mut self, current: &mut TreeNodeRef<T>, state: &mut T) -> Option<T> {
+        let child = { current.borrow().children().get(self.selected).cloned() };
+
+        if let Some(selected_node) = child {
+            if !selected_node.borrow().children().is_empty() {
+                *state = selected_node.borrow().value.clone();
+                self.selected = 0;
+                return None;
+            }
+
+            return Some(selected_node.borrow().value.clone());
+        }
+
+        None
     }
 }
 
@@ -145,20 +186,10 @@ impl<T: Clone + PartialEq + std::fmt::Display> ratatui::widgets::StatefulWidget 
             .block(Block::default().borders(Borders::ALL).style(border_style))
             .style(text_style);
 
-        let execution_widget = Paragraph::new("Execution")
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Exec")
-                    .style(border_style),
-            )
-            .style(Style::default().fg(Color::Gray));
-
         if let Some(previous_rect) = layout.previous {
             Widget::render(previous_items_widget, previous_rect, buf);
         }
 
         Widget::render(current_items_widget, layout.current, buf);
-        Widget::render(execution_widget, layout.exec, buf);
     }
 }

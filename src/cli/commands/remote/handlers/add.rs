@@ -6,6 +6,7 @@ use crate::{
 use anyhow::Context;
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct LocalArgs<'a> {
     pub name: &'a Option<String>,
     pub provider: &'a Option<String>,
@@ -34,6 +35,7 @@ pub fn remote_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> 
     log_debug!("[ INFO ] adding remote '{remote_name}' ({provider}) to registry");
 
     context
+        .registry
         .tx(|rgx| {
             rgx.remotes.push(Remote {
                 id: Uuid::new_v4().to_string(),
