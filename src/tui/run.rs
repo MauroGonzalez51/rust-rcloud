@@ -11,9 +11,51 @@ use crate::{
 use anyhow::Context;
 use crossterm::{event, execute, terminal};
 use ratatui::{
-    prelude::{CrosstermBackend, Terminal},
+    prelude::{Backend, CrosstermBackend, Terminal},
     widgets::StatefulWidget,
 };
+
+fn execute<B>(
+    terminal: &mut Terminal<B>,
+    menu: &mut TreeMenu<RootMenu>,
+    context: &CommandContext,
+    current: &mut TreeNodeRef<RootMenu>,
+    state: &mut RootMenu,
+) -> anyhow::Result<()>
+where
+    B: Backend + std::io::Write,
+{
+    if let Some(action) = menu.navigate_right(current, state) {
+        log_debug!("execute action: {:?}", action);
+
+        terminal::disable_raw_mode()?;
+        execute!(terminal.backend_mut(), terminal::LeaveAlternateScreen)?;
+
+        match execute::execute(context.clone(), &action)? {
+            execute::ExecutePostOperation::None => {
+                let should_continue = inquire::Confirm::new("Continue?")
+                    .with_default(true)
+                    .prompt()
+                    .context("failed to get confirmation")?;
+
+                if !should_continue {
+                    std::process::exit(0);
+                }
+
+                execute!(
+                    std::io::stdout(),
+                    terminal::Clear(terminal::ClearType::All),
+                    crossterm::cursor::MoveTo(0, 0)
+                )?;
+
+                execute!(terminal.backend_mut(), terminal::EnterAlternateScreen)?;
+                terminal::enable_raw_mode()?;
+            }
+        }
+    }
+
+    Ok(())
+}
 
 pub fn run_tui(context: CommandContext) -> anyhow::Result<()> {
     terminal::enable_raw_mode()?;
@@ -49,46 +91,32 @@ pub fn run_tui(context: CommandContext) -> anyhow::Result<()> {
             };
 
             match k.code {
-                event::KeyCode::Char('q') => break,
-                event::KeyCode::Char('j') | event::KeyCode::Down => {
+                event::KeyCode::Char(c) if context.config.tui.keys.quit.contains(&c) => break,
+
+                event::KeyCode::Char(c) if context.config.tui.keys.down.contains(&c) => {
                     menu.navigate_down(&mut current);
                 }
-                event::KeyCode::Char('k') | event::KeyCode::Up => {
+                event::KeyCode::Down => menu.navigate_down(&mut current),
+
+                event::KeyCode::Char(c) if context.config.tui.keys.up.contains(&c) => {
                     menu.navigate_up(&mut current);
                 }
-                event::KeyCode::Char('l') | event::KeyCode::Enter | event::KeyCode::Right => {
-                    if let Some(action) = menu.navigate_right(&mut current, &mut state) {
-                        log_debug!("execute action: {:?}", action);
+                event::KeyCode::Up => menu.navigate_up(&mut current),
 
-                        terminal::disable_raw_mode()?;
-                        execute!(terminal.backend_mut(), terminal::LeaveAlternateScreen)?;
-
-                        match execute::execute(context.clone(), &action)? {
-                            execute::ExecutePostOperation::None => {
-                                let should_continue = inquire::Confirm::new("Continue?")
-                                    .with_default(true)
-                                    .prompt()
-                                    .context("failed to get confirmation")?;
-
-                                if !should_continue {
-                                    std::process::exit(0);
-                                }
-
-                                execute!(
-                                    std::io::stdout(),
-                                    terminal::Clear(terminal::ClearType::All),
-                                    crossterm::cursor::MoveTo(0, 0)
-                                )?;
-
-                                execute!(terminal.backend_mut(), terminal::EnterAlternateScreen)?;
-                                terminal::enable_raw_mode()?;
-                            }
-                        }
-                    }
+                event::KeyCode::Char(c) if context.config.tui.keys.right.contains(&c) => {
+                    execute(&mut terminal, &mut menu, &context, &mut current, &mut state)?;
                 }
-                event::KeyCode::Char('h') | event::KeyCode::Left => {
+                event::KeyCode::Enter | event::KeyCode::Right => {
+                    execute(&mut terminal, &mut menu, &context, &mut current, &mut state)?;
+                }
+
+                event::KeyCode::Char('h') => {
                     menu.navigate_left(&mut current, &mut state);
                 }
+                event::KeyCode::Left => {
+                    menu.navigate_left(&mut current, &mut state);
+                }
+
                 _ => {}
             }
         }

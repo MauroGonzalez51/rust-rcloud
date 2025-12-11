@@ -2,9 +2,9 @@ use crate::{
     log_warn,
     tui::utils::prelude::{TreeNodeGetBy, TreeNodeOperations, TreeNodeRef},
 };
+
 use ratatui::{
-    layout,
-    style::{Color, Modifier, Style},
+    prelude::{Color, Modifier, Style, layout},
     widgets::{Block, Borders, List, ListItem, Widget},
 };
 
