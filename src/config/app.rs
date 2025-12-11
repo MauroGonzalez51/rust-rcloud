@@ -11,11 +11,41 @@ struct Asset;
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct AppConfig {
     pub core: CoreConfig,
+
+    #[serde(default)]
+    pub tui: TuiConfig,
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
 pub struct CoreConfig {
     pub temp_path: Option<PathBuf>,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct TuiConfig {
+    #[serde(default)]
+    pub keys: KeyBindings,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct KeyBindings {
+    pub quit: Vec<char>,
+    pub up: Vec<char>,
+    pub down: Vec<char>,
+    pub left: Vec<char>,
+    pub right: Vec<char>,
+}
+
+impl Default for KeyBindings {
+    fn default() -> Self {
+        Self {
+            quit: vec!['q'],
+            up: vec!['k'],
+            down: vec!['j'],
+            left: vec!['h'],
+            right: vec!['l'],
+        }
+    }
 }
 
 impl AppConfig {
