@@ -4,27 +4,26 @@ use crate::{
         context::CommandContext,
     },
     config::prelude::HookExecType,
-    log_warn,
+    log_info, log_warn,
 };
 
 use anyhow::Context;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LocalArgs<'a> {
     pub direction: &'a Option<HookExecType>,
     pub path_id: &'a Option<String>,
-    pub force: &'a bool,
-    pub clean: &'a bool,
+    pub force: &'a Option<bool>,
+    pub clean: &'a Option<bool>,
 }
 
-// TODO: force and clean should be asked as well
 impl<'a> Default for LocalArgs<'a> {
     fn default() -> Self {
         Self {
             direction: &None,
             path_id: &None,
-            force: &false,
-            clean: &true,
+            force: &None,
+            clean: &None,
         }
     }
 }
@@ -32,10 +31,6 @@ impl<'a> Default for LocalArgs<'a> {
 pub fn sync_single(
     mut context: CommandContext<LocalArgs>,
 ) -> anyhow::Result<CommandContext<LocalArgs>> {
-    if *context.local.force {
-        log_warn!("using --force");
-    }
-
     let direction = match context.local.direction {
         Some(value) => value,
         None => &HookExecType::select("Select direction:")
@@ -69,6 +64,38 @@ pub fn sync_single(
 
     let hooks = &path_config.hooks;
 
+    if let Some(force) = context.local.force
+        && *force
+    {
+        log_warn!("using force option");
+    }
+
+    if let Some(clean) = context.local.clean
+        && *clean
+    {
+        log_info!(
+            "local directory {} will be cleaned when using {}",
+            path_config.local_path,
+            HookExecType::Pull
+        );
+    }
+
+    let force = match context.local.force {
+        Some(value) => value,
+        None => &inquire::Confirm::new("Should we use force option?")
+            .with_default(false)
+            .prompt()
+            .context("failed to prompt user")?,
+    };
+
+    let clean = match context.local.clean {
+        Some(value) => value,
+        None => &inquire::Confirm::new("Should we use clean option?")
+            .with_default(true)
+            .prompt()
+            .context("failed to prompt user")?,
+    };
+
     match direction {
         HookExecType::Push => utils::push(utils::push::PushOptions {
             config: &context.config,
@@ -79,7 +106,7 @@ pub fn sync_single(
                 path_config: &path_config,
             },
             hooks: &hooks.push,
-            force: context.local.force,
+            force,
         })?,
 
         HookExecType::Pull => utils::pull(utils::pull::PullOptions {
@@ -91,8 +118,8 @@ pub fn sync_single(
                 path_config: &path_config,
             },
             hooks: &hooks.pull,
-            clean: context.local.clean,
-            force: context.local.force,
+            clean,
+            force,
         })?,
     }
 

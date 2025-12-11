@@ -11,9 +11,14 @@ pub fn declare_tags(registry: &Registry) -> anyhow::Result<Vec<String>> {
     let mut tags: Vec<String> = vec![];
 
     if add_tags {
-        tags = TagOption::multiple_select("Select tags:", registry)
+        tags = TagOption::multiple_select("Select tags:", registry, true, false)
             .context("failed to select tags")?;
     }
 
     Ok(tags)
+}
+
+pub fn select_tags(registry: &Registry) -> anyhow::Result<Vec<String>> {
+    TagOption::multiple_select("Select tags:", registry, false, true)
+        .context("failed to select tags")
 }

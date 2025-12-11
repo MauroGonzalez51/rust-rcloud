@@ -12,12 +12,22 @@ pub struct CommandContext<L = ()> {
 }
 
 impl<L: Clone> CommandContext<L> {
+    #[allow(dead_code)]
     pub fn new(config: AppConfig, global: GlobalParameters, registry: Registry, local: L) -> Self {
         Self {
             config,
             global,
             registry,
             local,
+        }
+    }
+
+    pub fn with_args<T: Clone>(&self, args: T) -> CommandContext<T> {
+        CommandContext {
+            config: self.config.clone(),
+            global: self.global.clone(),
+            registry: self.registry.clone(),
+            local: args.clone(),
         }
     }
 }

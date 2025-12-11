@@ -1,31 +1,21 @@
 use crate::{
-    cli::{commands::sync::handlers::single, context::CommandContext},
-    log_debug, log_error, log_info, log_warn,
+    cli::{
+        commands::{path::utils::tags, sync::handlers::single},
+        context::CommandContext,
+    },
+    log_error, log_info, log_warn,
 };
 use anyhow::Context;
 
-// TODO: tags, force and clean should be asked as well
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct LocalArgs<'a> {
     pub tags: &'a [String],
-    pub force_all: &'a bool,
-    pub clean_all: &'a bool,
-}
-
-impl<'a> Default for LocalArgs<'a> {
-    fn default() -> Self {
-        Self {
-            tags: &[],
-            force_all: &false,
-            clean_all: &false,
-        }
-    }
 }
 
 pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
-    log_debug!("using tags: {:?}", context.local.tags);
+    let tags = tags::select_tags(&context.registry)?;
 
-    let matching_paths_ids: Vec<String> = match context.local.tags.is_empty() {
+    let matching_paths_ids: Vec<String> = match tags.is_empty() {
         true => context
             .registry
             .paths
@@ -57,16 +47,11 @@ pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
             let args = single::LocalArgs {
                 direction: &None,
                 path_id: &Some(path_id),
-                force: context.local.force_all,
-                clean: context.local.clean_all,
+                force: &None,
+                clean: &None,
             };
 
-            let path_context = CommandContext::new(
-                context.config.clone(),
-                context.global.clone(),
-                context.registry.clone(),
-                args,
-            );
+            let path_context = context.with_args(args);
 
             match single::sync_single(path_context) {
                 Ok(_context) => {

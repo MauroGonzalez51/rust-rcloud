@@ -43,6 +43,7 @@ pub fn declare_hooks() -> anyhow::Result<(Vec<HookConfig>, Vec<HookConfig>)> {
             ];
 
             let selected_options = MultiSelect::new("Select when the Hook will run:", options)
+                .with_vim_mode(true)
                 .prompt()
                 .context("failed to select hook exec type")?;
 
