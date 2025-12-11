@@ -5,3 +5,28 @@
 [core]
 # if leave uncommented it will use system temp directory
 # temp_path = "D:/Temp/rcloud"
+
+# -------------------------------------------------------------
+# TUI (Terminal User Interface) Configuration
+# -------------------------------------------------------------
+
+[tui.keys]
+# Key bindings for TUI navigation
+# Multiple keys can be assigned to the same action
+# Default vim-style bindings are provided
+# Arrow keys are used by default in addition to these bindings
+
+# Quit the TUI application
+quit = ['q']
+
+# Navigate up in the menu
+up = ['k']
+
+# Navigate down in the menu
+down = ['j']
+
+# Navigate to parent menu / Go back
+left = ['h']
+
+# Navigate to submenu / Execute action
+right = ['l']
