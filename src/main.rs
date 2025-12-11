@@ -138,20 +138,9 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
             },
 
             Commands::Sync { action } => match action {
-                cli::commands::sync::command::SyncCommand::All {
-                    tags,
-                    force_all,
-                    clean_all,
-                } => sync_all(command_context!(
-                    app_config,
-                    global,
-                    registry,
-                    SyncAllArgs {
-                        tags,
-                        force_all,
-                        clean_all
-                    }
-                ))?,
+                cli::commands::sync::command::SyncCommand::All { tags } => sync_all(
+                    command_context!(app_config, global, registry, SyncAllArgs { tags }),
+                )?,
 
                 cli::commands::sync::command::SyncCommand::Path {
                     direction,
@@ -166,8 +155,8 @@ fn run() -> anyhow::Result<(), anyhow::Error> {
                         SyncSingleArgs {
                             direction,
                             path_id,
-                            force,
-                            clean
+                            force: if *force { &Some(true) } else { &None },
+                            clean: if *clean { &Some(true) } else { &None },
                         }
                     ))?;
                 }

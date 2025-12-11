@@ -8,16 +8,6 @@ pub enum SyncCommand {
     All {
         #[arg(long, value_name = "...TAGS", help = "comma separated tags to sync")]
         tags: Vec<String>,
-
-        #[arg(short = 'F', long, help = "Force sending to remote (ALL)")]
-        force_all: bool,
-
-        #[arg(
-            short = 'C',
-            long,
-            help = "Clean target directory before executing workflow (ALL)"
-        )]
-        clean_all: bool,
     },
     #[command(about = "Sync a specific path by ID")]
     Path {

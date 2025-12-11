@@ -20,10 +20,7 @@ pub fn compute_remote_filename(hooks: &[HookConfig], base_name: &str) -> String 
         return base_name.to_string();
     }
 
-    let last = hooks
-        .iter()
-        .filter(|hook| hook.modifies_filename())
-        .next_back();
+    let last = hooks.iter().rfind(|hook| hook.modifies_filename());
 
     match last {
         Some(hook) => match hook.hook_type() {

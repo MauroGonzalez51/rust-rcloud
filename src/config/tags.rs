@@ -18,7 +18,12 @@ impl std::fmt::Display for TagOption {
 }
 
 impl TagOption {
-    pub fn multiple_select(msg: &str, registry: &Registry) -> anyhow::Result<Vec<String>> {
+    pub fn multiple_select(
+        msg: &str,
+        registry: &Registry,
+        allow_create_new_tags: bool,
+        allow_empty: bool,
+    ) -> anyhow::Result<Vec<String>> {
         let existing_tags: Vec<String> = registry
             .paths
             .iter()
@@ -36,7 +41,9 @@ impl TagOption {
             .map(|t| TagOption::Existing(t.clone()))
             .collect();
 
-        existing_tags.push(TagOption::AddNew);
+        if allow_create_new_tags {
+            existing_tags.push(TagOption::AddNew);
+        }
 
         let mut selected_tags = Vec::new();
 
@@ -56,9 +63,14 @@ impl TagOption {
                 .collect();
 
             let selections = MultiSelect::new(msg, existing_tags.clone())
+                .with_vim_mode(true)
                 .with_default(&default_indices)
                 .prompt()
                 .context("failed to select tags")?;
+
+            if !allow_empty && selections.is_empty() {
+                continue;
+            }
 
             let mut should_continue = false;
 

@@ -33,7 +33,7 @@ where
 
         match execute::execute(context.clone(), &action)? {
             execute::ExecutePostOperation::None => {
-                let should_continue = inquire::Confirm::new("Continue?")
+                let should_continue = inquire::Confirm::new("Go back to TUI?")
                     .with_default(true)
                     .prompt()
                     .context("failed to get confirmation")?;
