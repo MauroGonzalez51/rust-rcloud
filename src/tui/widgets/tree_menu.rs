@@ -13,6 +13,12 @@ pub struct TreeMenu<T: Clone + PartialEq + std::fmt::Display> {
     selected: usize,
 }
 
+struct LayoutRects {
+    current: layout::Rect,
+    previous: Option<layout::Rect>,
+    exec: layout::Rect,
+}
+
 impl<T: Clone + PartialEq + std::fmt::Display> TreeMenu<T> {
     pub fn new(tree: TreeNodeRef<T>, selected: usize) -> Self {
         Self { tree, selected }
@@ -20,27 +26,39 @@ impl<T: Clone + PartialEq + std::fmt::Display> TreeMenu<T> {
 }
 
 impl<T: Clone + PartialEq + std::fmt::Display> TreeMenu<T> {
-    fn layout(
-        &self,
-        area: &layout::Rect,
-        parent: &Option<TreeNodeRef<T>>,
-    ) -> std::rc::Rc<[layout::Rect]> {
+    fn layout(&self, area: &layout::Rect, parent: &Option<TreeNodeRef<T>>) -> LayoutRects {
         match parent {
-            Some(_) => layout::Layout::default()
-                .direction(layout::Direction::Horizontal)
-                .constraints([
-                    layout::Constraint::Percentage(30),
-                    layout::Constraint::Percentage(30),
-                    layout::Constraint::Percentage(40),
-                ])
-                .split(*area),
-            None => layout::Layout::default()
-                .direction(layout::Direction::Horizontal)
-                .constraints([
-                    layout::Constraint::Percentage(60),
-                    layout::Constraint::Percentage(40),
-                ])
-                .split(*area),
+            Some(_) => {
+                let rects = layout::Layout::default()
+                    .direction(layout::Direction::Horizontal)
+                    .constraints([
+                        layout::Constraint::Percentage(30),
+                        layout::Constraint::Percentage(30),
+                        layout::Constraint::Percentage(40),
+                    ])
+                    .split(*area);
+
+                LayoutRects {
+                    previous: Some(rects[0]),
+                    current: rects[1],
+                    exec: rects[2],
+                }
+            }
+            None => {
+                let rects = layout::Layout::default()
+                    .direction(layout::Direction::Horizontal)
+                    .constraints([
+                        layout::Constraint::Percentage(60),
+                        layout::Constraint::Percentage(40),
+                    ])
+                    .split(*area);
+
+                LayoutRects {
+                    previous: None,
+                    current: rects[0],
+                    exec: rects[1],
+                }
+            }
         }
     }
 }
@@ -136,19 +154,11 @@ impl<T: Clone + PartialEq + std::fmt::Display> ratatui::widgets::StatefulWidget 
             )
             .style(Style::default().fg(Color::Gray));
 
-        match current.borrow().parent() {
-            Some(_) => {
-                Widget::render(previous_items_widget, layout[0], buf);
-
-                Widget::render(current_items_widget, layout[1], buf);
-
-                Widget::render(execution_widget, layout[2], buf);
-            }
-            None => {
-                Widget::render(current_items_widget, layout[0], buf);
-
-                Widget::render(execution_widget, layout[1], buf);
-            }
+        if let Some(previous_rect) = layout.previous {
+            Widget::render(previous_items_widget, previous_rect, buf);
         }
+
+        Widget::render(current_items_widget, layout.current, buf);
+        Widget::render(execution_widget, layout.exec, buf);
     }
 }
