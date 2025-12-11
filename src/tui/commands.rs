@@ -12,7 +12,6 @@ pub enum RootMenu {
 #[derive(Clone, Debug, PartialEq)]
 pub enum RootMenuOptions {
     Exit,
-    GoBack,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -106,7 +105,6 @@ impl std::fmt::Display for RootMenu {
                 SyncMenuVariant::All => write!(f, "Sync ALL paths that matches tags"),
             },
             RootMenu::Options(variant) => match variant {
-                RootMenuOptions::GoBack => write!(f, "Go Back"),
                 RootMenuOptions::Exit => write!(f, "Exit"),
             },
         }

@@ -11,6 +11,16 @@ pub struct LocalArgs<'a> {
     pub provider: &'a Option<String>,
 }
 
+impl<'a> Default for LocalArgs<'a> {
+    fn default() -> Self {
+        Self {
+            id: &None,
+            name: &None,
+            provider: &None,
+        }
+    }
+}
+
 pub fn remote_update(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     if context.registry.remotes.is_empty() {
         log_warn!("no remotes configured");

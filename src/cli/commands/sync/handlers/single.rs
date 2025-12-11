@@ -17,6 +17,18 @@ pub struct LocalArgs<'a> {
     pub clean: &'a bool,
 }
 
+// TODO: force and clean should be asked as well
+impl<'a> Default for LocalArgs<'a> {
+    fn default() -> Self {
+        Self {
+            direction: &None,
+            path_id: &None,
+            force: &false,
+            clean: &true,
+        }
+    }
+}
+
 pub fn sync_single(
     mut context: CommandContext<LocalArgs>,
 ) -> anyhow::Result<CommandContext<LocalArgs>> {

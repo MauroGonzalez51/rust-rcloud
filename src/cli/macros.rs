@@ -100,6 +100,10 @@ macro_rules! use_handlers {
 /// ```
 #[macro_export]
 macro_rules! command_context {
+    ($config:expr, $global:expr, $registry:expr, $args:expr) => {
+        CommandContext::from(($config, $global, $registry, $args))
+    };
+
     ($config:expr, $global:expr, $registry:expr, $args_type:ident { $($field:ident $(: $value:expr)?),* $(,)? }) => {
         CommandContext::from((
             $config,

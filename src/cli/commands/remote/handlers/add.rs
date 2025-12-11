@@ -12,6 +12,15 @@ pub struct LocalArgs<'a> {
     pub provider: &'a Option<String>,
 }
 
+impl<'a> Default for LocalArgs<'a> {
+    fn default() -> Self {
+        Self {
+            name: &None,
+            provider: &None,
+        }
+    }
+}
+
 pub fn remote_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     let remote_name = match context.local.name {
         Some(value) => value,

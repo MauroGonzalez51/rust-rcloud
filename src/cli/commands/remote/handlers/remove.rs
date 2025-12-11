@@ -9,6 +9,12 @@ pub struct LocalArgs<'a> {
     pub id: &'a Option<String>,
 }
 
+impl<'a> Default for LocalArgs<'a> {
+    fn default() -> Self {
+        Self { id: &None }
+    }
+}
+
 pub fn remote_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     if context.registry.remotes.is_empty() {
         log_warn!("no remotes configured");

@@ -14,6 +14,15 @@ pub struct LocalArgs<'a> {
     pub path_config: &'a Option<String>,
 }
 
+impl<'a> Default for LocalArgs<'a> {
+    fn default() -> Self {
+        Self {
+            path: &None,
+            path_config: &None,
+        }
+    }
+}
+
 pub fn remote_ls(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     if let Some(path) = context.local.path {
         let status = execute_rclone(&context.global.rclone, path)?;

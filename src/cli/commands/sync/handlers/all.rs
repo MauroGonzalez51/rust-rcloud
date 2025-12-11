@@ -4,11 +4,22 @@ use crate::{
 };
 use anyhow::Context;
 
+// TODO: tags, force and clean should be asked as well
 #[derive(Clone)]
 pub struct LocalArgs<'a> {
     pub tags: &'a [String],
     pub force_all: &'a bool,
     pub clean_all: &'a bool,
+}
+
+impl<'a> Default for LocalArgs<'a> {
+    fn default() -> Self {
+        Self {
+            tags: &[],
+            force_all: &false,
+            clean_all: &false,
+        }
+    }
 }
 
 pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
