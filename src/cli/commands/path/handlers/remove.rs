@@ -15,20 +15,22 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn path_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
-    if context.registry.paths.is_empty() {
+pub fn path_remove(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+    if context.with_registry()?.paths.is_empty() {
         log_warn!("no paths configured");
         return Ok(());
     }
 
     let path_id = match context.local.path_id {
         Some(value) => value,
-        None => &path::Prompt::path_config("Select a record:", &context.registry)
-            .context("failed to select path config")?,
+        None => {
+            &path::Prompt::path_config("Select a record:", std::sync::Arc::clone(&context.registry))
+                .context("failed to select path config")?
+        }
     };
 
     let path = context
-        .registry
+        .with_registry()?
         .paths
         .iter()
         .find(|p| p.id == *path_id)
@@ -38,7 +40,7 @@ pub fn path_remove(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()>
     log_info!("Removing path: {} -> {}", path.local_path, path.remote_path);
 
     context
-        .registry
+        .with_registry()?
         .tx(|rgx| {
             rgx.paths.retain(|r| r.id != path.id);
         })

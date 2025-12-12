@@ -21,23 +21,29 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn remote_update(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
-    if context.registry.remotes.is_empty() {
+pub fn remote_update(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+    if context.with_registry()?.remotes.is_empty() {
         log_warn!("no remotes configured");
         return Ok(());
     }
 
     let remote_info = match context.local.id {
         Some(value) => {
-            if !context.registry.remotes.iter().any(|r| r.id == *value) {
+            if !context
+                .with_registry()?
+                .remotes
+                .iter()
+                .any(|r| r.id == *value)
+            {
                 anyhow::bail!("remote with id '{}' not found", value);
             }
 
-            remote::Utils::remote_by_id(&context.registry, value).context("remote not found")?
+            remote::Utils::remote_by_id(std::sync::Arc::clone(&context.registry), value)
+                .context("remote not found")?
         }
         None => remote::Prompt::remote::<fn(inquire::Select<String>) -> inquire::Select<String>>(
             "Select a remote to update:",
-            &context.registry,
+            std::sync::Arc::clone(&context.registry),
             None,
         )
         .context("failed to execute prompt")?,
@@ -64,7 +70,7 @@ pub fn remote_update(mut context: CommandContext<LocalArgs>) -> anyhow::Result<(
     };
 
     context
-        .registry
+        .with_registry()?
         .tx(|rgx| {
             if let Some(remote) = rgx.remotes.iter_mut().find(|r| r.id == *remote_info.id) {
                 log_info!("found remote to update");

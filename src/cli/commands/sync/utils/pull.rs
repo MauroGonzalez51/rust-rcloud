@@ -18,7 +18,7 @@ pub struct PullOptionsPaths<'a> {
 
 pub struct PullOptions<'a> {
     pub config: &'a AppConfig,
-    pub registry: &'a mut Registry,
+    pub registry: std::sync::Arc<std::sync::Mutex<Registry>>,
     pub paths: PullOptionsPaths<'a>,
     pub hooks: &'a [HookConfig],
     pub force: &'a bool,
@@ -189,6 +189,8 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
 
     options
         .registry
+        .lock()
+        .map_err(|e| anyhow::anyhow!("{}", e))?
         .tx(|rgx| {
             if let Some(path) = rgx
                 .paths

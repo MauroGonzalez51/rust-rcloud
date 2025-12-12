@@ -26,8 +26,8 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn path_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
-    if context.registry.remotes.is_empty() {
+pub fn path_add(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+    if context.with_registry()?.remotes.is_empty() {
         log_warn!("there are no remotes configured");
         return Ok(());
     }
@@ -36,7 +36,7 @@ pub fn path_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
         Some(value) => value,
         None => &path::Prompt::remote_id::<
             fn(inquire::Select<'_, String>) -> inquire::Select<'_, String>,
-        >(&context.registry, None)
+        >(std::sync::Arc::clone(&context.registry), None)
         .context("failed to get remote_id")?,
     };
 
@@ -67,7 +67,8 @@ pub fn path_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
 
     let (push, pull) = hooks::declare_hooks().context("failed to get hooks")?;
 
-    let tags = tags::declare_tags(&context.registry).context("failed to get tags")?;
+    let tags = tags::declare_tags(std::sync::Arc::clone(&context.registry))
+        .context("failed to get tags")?;
 
     let path_config = PathConfig {
         id: uuid::Uuid::new_v4().to_string(),
@@ -88,10 +89,8 @@ pub fn path_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
 
     if confirm_save {
         context
-            .registry
-            .tx(|rgx| {
-                rgx.paths.push(path_config);
-            })
+            .with_registry()?
+            .tx(|rgx| rgx.paths.push(path_config))
             .context("failed to execute transaction")?;
     }
 

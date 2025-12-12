@@ -21,7 +21,7 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn remote_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+pub fn remote_add(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     let remote_name = match context.local.name {
         Some(value) => value,
         None => &remote::Prompt::name()
@@ -44,7 +44,7 @@ pub fn remote_add(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> 
     log_debug!("[ INFO ] adding remote '{remote_name}' ({provider}) to registry");
 
     context
-        .registry
+        .with_registry()?
         .tx(|rgx| {
             rgx.remotes.push(Remote {
                 id: Uuid::new_v4().to_string(),

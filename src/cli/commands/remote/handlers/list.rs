@@ -1,12 +1,12 @@
 use crate::cli::context::CommandContext;
 use console::Style;
 
-pub fn remote_list(context: CommandContext) {
+pub fn remote_list(context: CommandContext) -> anyhow::Result<()> {
     let remote_name = Style::new().bold().green();
     let remote_provider = Style::new().italic();
     let remote_id = Style::new().underlined();
 
-    if context.registry.remotes.is_empty() {
+    if context.with_registry()?.remotes.is_empty() {
         println!(
             "{}",
             Style::new()
@@ -16,7 +16,7 @@ pub fn remote_list(context: CommandContext) {
         )
     }
 
-    for (i, remote) in context.registry.remotes.iter().enumerate() {
+    for (i, remote) in context.with_registry()?.remotes.iter().enumerate() {
         println!(
             "> {}. {} ({}) [id: {}]",
             i + 1,
@@ -25,4 +25,6 @@ pub fn remote_list(context: CommandContext) {
             remote_id.apply_to(&remote.id)
         )
     }
+
+    Ok(())
 }

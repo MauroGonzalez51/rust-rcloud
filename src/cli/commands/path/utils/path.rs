@@ -5,7 +5,10 @@ use inquire::{Select, Text};
 pub struct Prompt;
 
 impl Prompt {
-    pub fn remote_id<F>(registry: &Registry, f: Option<F>) -> anyhow::Result<String>
+    pub fn remote_id<F>(
+        registry: std::sync::Arc<std::sync::Mutex<Registry>>,
+        f: Option<F>,
+    ) -> anyhow::Result<String>
     where
         F: FnOnce(Select<'_, String>) -> Select<'_, String>,
     {
@@ -19,8 +22,13 @@ impl Prompt {
         Text::new(message).with_validator(inquire::validator::MinLengthValidator::new(1))
     }
 
-    pub fn path_config(prompt: &str, registry: &Registry) -> anyhow::Result<String> {
+    pub fn path_config(
+        prompt: &str,
+        registry: std::sync::Arc<std::sync::Mutex<Registry>>,
+    ) -> anyhow::Result<String> {
         let options: Vec<(String, String)> = registry
+            .lock()
+            .map_err(|e| anyhow::anyhow!("{}", e))?
             .paths
             .iter()
             .map(|p| {

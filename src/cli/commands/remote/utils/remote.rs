@@ -16,11 +16,17 @@ impl Prompt {
             .with_validator(inquire::validator::MinLengthValidator::new(1))
     }
 
-    pub fn remote<F>(prompt: &str, registry: &Registry, f: Option<F>) -> anyhow::Result<Remote>
+    pub fn remote<F>(
+        prompt: &str,
+        registry: std::sync::Arc<std::sync::Mutex<Registry>>,
+        f: Option<F>,
+    ) -> anyhow::Result<Remote>
     where
         F: FnOnce(Select<'_, String>) -> Select<'_, String>,
     {
         let options: Vec<(String, String)> = registry
+            .lock()
+            .map_err(|e| anyhow::anyhow!("{}", e))?
             .remotes
             .iter()
             .map(|r| {
@@ -55,8 +61,13 @@ impl Prompt {
 }
 
 impl Utils {
-    pub fn remote_by_id(registry: &Registry, id: &String) -> anyhow::Result<Remote> {
+    pub fn remote_by_id(
+        registry: std::sync::Arc<std::sync::Mutex<Registry>>,
+        id: &String,
+    ) -> anyhow::Result<Remote> {
         registry
+            .lock()
+            .map_err(|e| anyhow::anyhow!("{}", e))?
             .remotes
             .iter()
             .find(|r| r.id == *id)

@@ -48,7 +48,7 @@ pub fn execute(context: CommandContext, action: &RootMenu) -> anyhow::Result<Exe
                     context.config,
                     context.global,
                     context.registry
-                ));
+                ))?;
             }
             PathMenuVariant::Add => {
                 path_add(command_context!(
@@ -74,7 +74,7 @@ pub fn execute(context: CommandContext, action: &RootMenu) -> anyhow::Result<Exe
                     context.config,
                     context.global,
                     context.registry
-                ));
+                ))?;
             }
             RemoteMenuVariant::Ls => {
                 remote_ls(command_context!(

@@ -36,19 +36,21 @@ pub fn remote_ls(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
 
     let path_id = match context.local.path_config {
         Some(id) => id,
-        None => &path::Prompt::path_config("Select the path:", &context.registry)
-            .context("failed to select path")?,
+        None => {
+            &path::Prompt::path_config("Select the path:", std::sync::Arc::clone(&context.registry))
+                .context("failed to select path")?
+        }
     };
 
-    let path_config = context
-        .registry
+    let binding = context.with_registry()?;
+
+    let path_config = binding
         .paths
         .iter()
         .find(|p| p.id == *path_id)
         .ok_or_else(|| anyhow::anyhow!("path does not exists"))?;
 
-    let remote_config = context
-        .registry
+    let remote_config = binding
         .remotes
         .iter()
         .find(|r| r.id == *path_config.remote_id)
