@@ -13,17 +13,17 @@ pub struct LocalArgs<'a> {
 }
 
 pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
-    let tags = tags::select_tags(&context.registry)?;
+    let tags = tags::select_tags(std::sync::Arc::clone(&context.registry))?;
 
     let matching_paths_ids: Vec<String> = match tags.is_empty() {
         true => context
-            .registry
+            .with_registry()?
             .paths
             .iter()
             .map(|p| p.id.clone())
             .collect(),
         false => context
-            .registry
+            .with_registry()?
             .paths
             .iter()
             .filter(|p| p.tags.iter().any(|t| context.local.tags.contains(t)))
@@ -35,7 +35,7 @@ pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
 
     for path_id in matching_paths_ids {
         let path_info = context
-            .registry
+            .with_registry()?
             .paths
             .iter()
             .find(|p| p.id == path_id)

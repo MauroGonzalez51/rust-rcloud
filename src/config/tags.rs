@@ -20,11 +20,13 @@ impl std::fmt::Display for TagOption {
 impl TagOption {
     pub fn multiple_select(
         msg: &str,
-        registry: &Registry,
+        registry: std::sync::Arc<std::sync::Mutex<Registry>>,
         allow_create_new_tags: bool,
         allow_empty: bool,
     ) -> anyhow::Result<Vec<String>> {
         let existing_tags: Vec<String> = registry
+            .lock()
+            .map_err(|e| anyhow::anyhow!("{}", e))?
             .paths
             .iter()
             .flat_map(|path| path.tags.clone())

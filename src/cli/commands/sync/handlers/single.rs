@@ -29,7 +29,7 @@ impl<'a> Default for LocalArgs<'a> {
 }
 
 pub fn sync_single(
-    mut context: CommandContext<LocalArgs>,
+    context: CommandContext<LocalArgs>,
 ) -> anyhow::Result<CommandContext<LocalArgs>> {
     let direction = match context.local.direction {
         Some(value) => value,
@@ -41,13 +41,16 @@ pub fn sync_single(
 
     let path_id = match context.local.path_id {
         Some(value) => value.clone(),
-        None => path::Prompt::path_config("Select the path to sync:", &context.registry)
-            .context("failed to select path")?
-            .clone(),
+        None => path::Prompt::path_config(
+            "Select the path to sync:",
+            std::sync::Arc::clone(&context.registry),
+        )
+        .context("failed to select path")?
+        .clone(),
     };
 
     let path_config = context
-        .registry
+        .with_registry()?
         .paths
         .iter()
         .find(|p| p.id == path_id)
@@ -55,7 +58,7 @@ pub fn sync_single(
         .clone();
 
     let remote_config = context
-        .registry
+        .with_registry()?
         .remotes
         .iter()
         .find(|r| r.id == path_config.remote_id)
@@ -99,7 +102,7 @@ pub fn sync_single(
     match direction {
         HookExecType::Push => utils::push(utils::push::PushOptions {
             config: &context.config,
-            registry: &mut context.registry,
+            registry: std::sync::Arc::clone(&context.registry),
             paths: utils::push::PushOptionsPaths {
                 rclone: &context.global.rclone,
                 remote: &remote_config,
@@ -111,7 +114,7 @@ pub fn sync_single(
 
         HookExecType::Pull => utils::pull(utils::pull::PullOptions {
             config: &context.config,
-            registry: &mut context.registry,
+            registry: std::sync::Arc::clone(&context.registry),
             paths: utils::pull::PullOptionsPaths {
                 rclone: &context.global.rclone,
                 remote: &remote_config,

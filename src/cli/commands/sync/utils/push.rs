@@ -16,7 +16,7 @@ pub struct PushOptionsPaths<'a> {
 
 pub struct PushOptions<'a> {
     pub config: &'a AppConfig,
-    pub registry: &'a mut Registry,
+    pub registry: std::sync::Arc<std::sync::Mutex<Registry>>,
     pub paths: PushOptionsPaths<'a>,
     pub hooks: &'a [HookConfig],
     pub force: &'a bool,
@@ -135,6 +135,8 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
 
     options
         .registry
+        .lock()
+        .map_err(|e| anyhow::anyhow!("{}", e))?
         .tx(|rgx| {
             if let Some(path) = rgx
                 .paths
