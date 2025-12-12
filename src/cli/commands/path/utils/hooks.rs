@@ -53,21 +53,21 @@ pub fn declare_hooks() -> anyhow::Result<(Vec<HookConfig>, Vec<HookConfig>)> {
                 match exec_type {
                     HookExecType::Push => {
                         push_hooks.push(
-                            HookBuilder::new()
-                                .with_hook_type(hook_type)
-                                .with_exec_type(exec_type)
+                            HookBuilder::builder()
+                                .hook_type(Some(hook_type))
+                                .hook_exec_type(Some(exec_type))
                                 .build()
-                                .context("failed to build push hook")?,
+                                .try_into()?,
                         );
                     }
                     HookExecType::Pull => {
                         pull_hooks.insert(
                             0,
-                            HookBuilder::new()
-                                .with_hook_type(hook_type)
-                                .with_exec_type(exec_type)
+                            HookBuilder::builder()
+                                .hook_type(Some(hook_type))
+                                .hook_exec_type(Some(exec_type))
                                 .build()
-                                .context("failed to build pull hook")?,
+                                .try_into()?,
                         );
                     }
                 }

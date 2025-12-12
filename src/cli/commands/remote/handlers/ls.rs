@@ -32,7 +32,7 @@ pub fn remote_ls(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
         }
 
         return Ok(());
-    };
+    }
 
     let path_id = match context.local.path_config {
         Some(id) => id,

@@ -5,7 +5,7 @@ use crate::{
 
 use ratatui::{
     prelude::{Color, Modifier, Style, layout},
-    widgets::{Block, Borders, List, ListItem, Widget},
+    widgets::{Block, BorderType, Borders, List, ListItem, Widget},
 };
 
 #[derive(Clone)]
@@ -179,11 +179,21 @@ impl<T: Clone + PartialEq + std::fmt::Display> ratatui::widgets::StatefulWidget 
         let layout = self.layout(&area, &current.borrow().parent());
 
         let current_items_widget = List::new(current_items)
-            .block(Block::default().borders(Borders::ALL).style(border_style))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .style(border_style)
+                    .border_type(BorderType::Rounded),
+            )
             .style(text_style);
 
         let previous_items_widget = List::new(previous_items)
-            .block(Block::default().borders(Borders::ALL).style(border_style))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .style(border_style)
+                    .border_type(BorderType::Rounded),
+            )
             .style(text_style);
 
         if let Some(previous_rect) = layout.previous {
