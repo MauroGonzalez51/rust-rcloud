@@ -31,6 +31,12 @@ define_hook!(BackupHook {
 
 impl Hook for BackupHook {
     fn process(&self, ctx: HookContext, _cfg: &AppConfig) -> anyhow::Result<HookContext> {
+        anyhow::ensure!(
+            ctx.file_exists(),
+            "source file does not exist: {:?}",
+            &ctx.path
+        );
+
         for backup_type in &self.types {
             log_info!("executing backup {} in {}", backup_type, self.exec);
 

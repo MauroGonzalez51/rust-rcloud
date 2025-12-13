@@ -114,58 +114,23 @@ impl Logger {
     }
 
     pub fn error(&self, msg: impl std::fmt::Display) {
-        if !self.should_log(LogLevel::Error) {
-            return;
-        }
-        let plain = format!("[ ERROR ] {msg}");
-        self.write_file(&plain);
-        if self.should_print() {
-            eprintln!("{}", self.error.apply_to(&plain));
-        }
+        self.log(LogLevel::Error, "[ ERROR ]", &self.error, msg);
     }
 
     pub fn warn(&self, msg: impl std::fmt::Display) {
-        if !self.should_log(LogLevel::Warn) {
-            return;
-        }
-        let plain = format!("[ WARN ] {msg}");
-        self.write_file(&plain);
-        if self.should_print() {
-            eprintln!("{}", self.warn.apply_to(&plain));
-        }
+        self.log(LogLevel::Warn, "[ WARN ]", &self.warn, msg);
     }
 
     pub fn info(&self, msg: impl std::fmt::Display) {
-        if !self.should_log(LogLevel::Info) {
-            return;
-        }
-        let plain = format!("[ INFO ] {msg}");
-        self.write_file(&plain);
-        if self.should_print() {
-            println!("{}", self.info.apply_to(&plain));
-        }
+        self.log(LogLevel::Info, "[ INFO ]", &self.info, msg);
     }
 
     pub fn success(&self, msg: impl std::fmt::Display) {
-        if !self.should_log(LogLevel::Success) {
-            return;
-        }
-        let plain = format!("[ SUCCESS ] {msg}");
-        self.write_file(&plain);
-        if self.should_print() {
-            println!("{}", self.success.apply_to(&plain));
-        }
+        self.log(LogLevel::Success, "[ SUCCESS ]", &self.success, msg);
     }
 
     pub fn debug(&self, msg: impl std::fmt::Display) {
-        if !self.should_log(LogLevel::Debug) {
-            return;
-        }
-        let plain = format!("[ DEBUG ] {msg}");
-        self.write_file(&plain);
-        if self.should_print() {
-            println!("{}", self.debug.apply_to(&plain));
-        }
+        self.log(LogLevel::Debug, "[ DEBUG ]", &self.debug, msg);
     }
 
     pub fn with_context(&self, error: &anyhow::Error) {
@@ -178,6 +143,22 @@ impl Logger {
                 self.debug.apply_to(format!("Caused by ({})", i + 1)),
                 cause
             );
+        }
+    }
+
+    fn log(&self, level: LogLevel, prefix: &str, style: &Style, msg: impl std::fmt::Display) {
+        if !self.should_log(level) {
+            return;
+        }
+
+        let plain = format!("{} {}", prefix, msg);
+        self.write_file(&plain);
+
+        if self.should_print() {
+            match level {
+                LogLevel::Error | LogLevel::Warn => eprintln!("{}", style.apply_to(&plain)),
+                _ => println!("{}", style.apply_to(&plain)),
+            }
         }
     }
 }

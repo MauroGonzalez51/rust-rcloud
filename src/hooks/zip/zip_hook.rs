@@ -1,4 +1,4 @@
-use crate::{hooks::zip::ZipHook, log_info};
+use crate::{config::app::AppConfig, hooks::zip::ZipHook, log_info};
 use anyhow::Context;
 use std::{fs, io::Write, path::Path};
 
@@ -39,10 +39,11 @@ impl ZipHook {
                 .context("failed to build relative path")?;
 
             if let Some(set) = exclude_set
-                && set.is_match(relative_path) {
-                    log_info!("excluding: {}", relative_path.display());
-                    continue;
-                }
+                && set.is_match(relative_path)
+            {
+                log_info!("excluding: {}", relative_path.display());
+                continue;
+            }
 
             let file_content = fs::read(entry.path())
                 .with_context(|| format!("failed to read file: {:?}", entry.path()))?;
@@ -89,5 +90,19 @@ impl ZipHook {
         log_info!("added: {:?} ({} bytes)", file_name, file_content.len());
 
         Ok(())
+    }
+
+    pub fn base_temp_dir(cfg: &AppConfig) -> anyhow::Result<Option<std::path::PathBuf>> {
+        if let Some(path) = &cfg.core.temp_path {
+            if !path.exists() {
+                std::fs::create_dir_all(path).with_context(|| {
+                    format!("failed to create custom temp directory: {}", path.display())
+                })?;
+            }
+
+            return Ok(Some(path.clone()));
+        }
+
+        Ok(None)
     }
 }

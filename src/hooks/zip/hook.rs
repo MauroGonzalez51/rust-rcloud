@@ -7,6 +7,10 @@ use crate::{
 use anyhow::Context;
 use std::io::Write;
 
+const ZIP_PREFIX: &str = "rcloud-zip-";
+const ZIP_SUFFIX: &str = ".zip";
+const EXTRACT_PREFIX: &str = "rcloud-extract-";
+
 define_hook!(ZipHook {
     level: Option<i64>,
     exclude: Option<Vec<String>>,
@@ -14,23 +18,11 @@ define_hook!(ZipHook {
 
 impl Hook for ZipHook {
     fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext> {
-        if !ctx.file_exists() {
-            anyhow::bail!("source file does not exist: {:?}", &ctx.path);
-        }
-
-        let base_temp_dir = || -> anyhow::Result<Option<std::path::PathBuf>> {
-            if let Some(path) = &cfg.core.temp_path {
-                if !path.exists() {
-                    std::fs::create_dir_all(path).with_context(|| {
-                        format!("failed to create custom temp directory: {}", path.display())
-                    })?;
-                }
-
-                return Ok(Some(path.clone()));
-            }
-
-            Ok(None)
-        };
+        anyhow::ensure!(
+            ctx.file_exists(),
+            "source file does not exists: {:?}",
+            &ctx.path
+        );
 
         match self.exec {
             HookExecType::Push => {
@@ -66,10 +58,10 @@ impl Hook for ZipHook {
 
                 let checksum = utils::hash::Hash::hash_bytes(zip_bytes);
 
-                let mut temp_file = match base_temp_dir()? {
+                let mut temp_file = match Self::base_temp_dir(cfg)? {
                     Some(directory) => tempfile::Builder::new()
-                        .prefix("rcloud-zip-")
-                        .suffix(".zip")
+                        .prefix(ZIP_PREFIX)
+                        .suffix(ZIP_SUFFIX)
                         .tempfile_in(directory)
                         .context("failed to create temp file in custom directory")?,
                     None => tempfile::NamedTempFile::new()
@@ -96,9 +88,9 @@ impl Hook for ZipHook {
                 let mut archive =
                     zip::read::ZipArchive::new(file).context("failed to read zip archive")?;
 
-                let temp_dir = match base_temp_dir()? {
+                let temp_dir = match Self::base_temp_dir(cfg)? {
                     Some(directory) => tempfile::Builder::new()
-                        .prefix("rcloud-extract-")
+                        .prefix(EXTRACT_PREFIX)
                         .tempdir_in(directory)
                         .context("failed to create temp dir in custom path")?,
                     None => tempfile::tempdir().context("failed to create system temp dir")?,

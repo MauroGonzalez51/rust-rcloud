@@ -45,7 +45,6 @@ where
                 execute!(
                     std::io::stdout(),
                     terminal::Clear(terminal::ClearType::All),
-                    crossterm::cursor::MoveTo(0, 0)
                 )?;
 
                 execute!(terminal.backend_mut(), terminal::EnterAlternateScreen)?;
