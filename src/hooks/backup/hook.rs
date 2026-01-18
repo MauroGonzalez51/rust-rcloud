@@ -56,12 +56,7 @@ impl Hook for BackupHook {
                         continue;
                     }
 
-                    self.backup_local(&HookContext::new(
-                        local_path,
-                        &ctx.rclone_path,
-                        &ctx.remote_config,
-                        &ctx.path_config,
-                    ))?;
+                    self.backup_local(&ctx.with_path(local_path))?;
                 }
                 (BackupType::Remote, HookExecType::Push) => {
                     self.backup_remote(&ctx)?;

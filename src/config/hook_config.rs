@@ -1,6 +1,9 @@
 use crate::{
     config::prelude::AppConfig,
-    hooks::prelude::{BackupHook, BackupHookConfig, HookContext, ZipHook, ZipHookConfig},
+    hooks::prelude::{
+        BackupHook, BackupHookConfig, EncryptionHook, EncryptionHookConfig, HookContext, ZipHook,
+        ZipHookConfig,
+    },
     register_hooks,
 };
 use clap::ValueEnum;
@@ -11,10 +14,11 @@ pub trait Hook: std::fmt::Debug + Send + Sync {
     fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext>;
 }
 
-#[derive(Debug, Clone, Copy, Selectable)]
+#[derive(Debug, Clone, Copy, Selectable, PartialEq)]
 pub enum Hooks {
     Zip,
     Backup,
+    Encryption,
 }
 
 impl std::fmt::Display for Hooks {
@@ -22,6 +26,7 @@ impl std::fmt::Display for Hooks {
         match self {
             Hooks::Zip => write!(f, "Zip"),
             Hooks::Backup => write!(f, "Backup"),
+            Hooks::Encryption => write!(f, "Encryption"),
         }
     }
 }
@@ -59,5 +64,14 @@ register_hooks! {
         display: |cfg: &BackupHookConfig, f: &mut std::fmt::Formatter| write!(f, "Backup(replicas: {})", cfg.replicas),
         push_desc: "Create a backup copy on Local/Remote",
         pull_desc: "Create a backup copy on Local/Remote",
+    },
+    Encryption {
+        config: EncryptionHookConfig,
+        hook: EncryptionHook,
+        enum_type: Hooks::Encryption,
+        modifies_name: false,
+        display: |_cfg: &EncryptionHookConfig, f: &mut std::fmt::Formatter| write!(f, "Encryption"),
+        push_desc: "Encrypt Path",
+        pull_desc: "Decrypt Path",
     }
 }

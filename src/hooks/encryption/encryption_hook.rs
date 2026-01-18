@@ -1,0 +1,181 @@
+use crate::{config::prelude::HookExecType, hooks::encryption::EncryptionHook, log_info};
+use aes_gcm::{KeyInit, aead::Aead};
+use anyhow::Context;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use inquire::Password;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
+const NONCE_SIZE: usize = 12;
+const VALIDATION_MARKER: &[u8] = b"RCLOUD_ENCRYPTED";
+const ENCRYPTION_PREFIX: &str = "rcloud-encrypted-";
+const STATIC_SALT: &str = "6f2i3mHvfcugVNuT3di+yN+Cc0/v1j6AY2mh04m+Azox";
+
+impl EncryptionHook {
+    pub fn derive_key(&self) -> anyhow::Result<Vec<u8>> {
+        let password_input = Password::new("Enter encryption password:")
+            .without_confirmation()
+            .with_display_mode(inquire::PasswordDisplayMode::Masked)
+            .prompt()
+            .context("failed to read password input")?;
+
+        let parsed_hash = PasswordHash::new(&self.hash)
+            .map_err(|e| anyhow::anyhow!("invalid argon2 hash format in `hash`: {}", e))?;
+
+        Argon2::default()
+            .verify_password(password_input.as_bytes(), &parsed_hash)
+            .map_err(|_| anyhow::anyhow!("invalid password provided"))?;
+
+        let salt = argon2::password_hash::SaltString::from_b64(STATIC_SALT)
+            .map_err(|e| anyhow::anyhow!("invalid static salt {}", e))?;
+
+        let output = Argon2::default()
+            .hash_password(password_input.as_bytes(), &salt)
+            .map_err(|e| anyhow::anyhow!("failed to derive key: {}", e))?;
+
+        let hash_output = output
+            .hash
+            .ok_or_else(|| anyhow::anyhow!("crypto error: missing hash output"))?;
+
+        let key = hash_output.as_bytes().to_vec();
+
+        anyhow::ensure!(key.len() >= 32, "derived key too short");
+
+        Ok(key[..32].to_vec())
+    }
+
+    fn encrypt(&self, data: &[u8], derived_key: &[u8]) -> anyhow::Result<Vec<u8>> {
+        let cipher = aes_gcm::Aes256Gcm::new_from_slice(&derived_key[..32])
+            .context("failed to create cipher")?;
+
+        let nonce_bytes: [u8; NONCE_SIZE] = rand::random();
+        let nonce = aes_gcm::Nonce::from_slice(&nonce_bytes);
+
+        let ciphertext = cipher
+            .encrypt(nonce, data)
+            .map_err(|e| anyhow::anyhow!("encryption failed: {}", e))?;
+
+        let mut result =
+            Vec::with_capacity(VALIDATION_MARKER.len() + NONCE_SIZE + ciphertext.len());
+
+        result.extend_from_slice(VALIDATION_MARKER);
+        result.extend_from_slice(&nonce_bytes);
+        result.extend_from_slice(&ciphertext);
+
+        Ok(result)
+    }
+
+    fn decrypt(&self, data: &[u8], derived_key: &[u8]) -> anyhow::Result<Vec<u8>> {
+        anyhow::ensure!(
+            data.len() > VALIDATION_MARKER.len() + NONCE_SIZE,
+            "encrypted data too short"
+        );
+
+        anyhow::ensure!(
+            &data[..VALIDATION_MARKER.len()] == VALIDATION_MARKER,
+            "data is not encrypted with expected marker"
+        );
+
+        let nonce_start = VALIDATION_MARKER.len();
+        let cipher_start = nonce_start + NONCE_SIZE;
+
+        let nonce = aes_gcm::Nonce::from_slice(&data[nonce_start..cipher_start]);
+        let ciphertext = &data[cipher_start..];
+
+        let cipher = aes_gcm::Aes256Gcm::new_from_slice(&derived_key[..32])
+            .context("failed to create cipher")?;
+
+        cipher
+            .decrypt(nonce, ciphertext)
+            .map_err(|_| anyhow::anyhow!("decryption failed: wrong password or corrupt data"))
+    }
+
+    fn process_file(
+        &self,
+        source: &PathBuf,
+        derived_key: &[u8],
+        output_dir: &Path,
+    ) -> anyhow::Result<()> {
+        let data =
+            std::fs::read(source).with_context(|| format!("failed to read file: {:?}", source))?;
+
+        let processed = match self.exec {
+            HookExecType::Push => self.encrypt(&data, derived_key)?,
+            HookExecType::Pull => self.decrypt(&data, derived_key)?,
+        };
+
+        let file_name = source.file_name().context("failed to get file name")?;
+
+        let output_path = output_dir.join(file_name);
+
+        if let Some(parent) = output_path.parent() {
+            fs::create_dir_all(parent).with_context(|| {
+                format!(
+                    "failed to create parent directory {} for {}",
+                    parent.display(),
+                    source.display()
+                )
+            })?;
+        }
+
+        fs::write(&output_path, processed)
+            .with_context(|| format!("failed to write processed file: {:?}", output_path))?;
+
+        log_info!("processed file: {:?}", file_name);
+
+        Ok(())
+    }
+
+    fn process_directory(
+        &self,
+        source: &PathBuf,
+        derived_key: &[u8],
+        output_dir: &Path,
+    ) -> anyhow::Result<()> {
+        for entry in walkdir::WalkDir::new(source)
+            .into_iter()
+            .filter_map(Result::ok)
+        {
+            let entry_path = entry.path();
+            if entry_path == source {
+                continue;
+            }
+
+            let relative_path = entry_path
+                .strip_prefix(source)
+                .context("failed to build relative path")?;
+
+            let output_path = output_dir.join(relative_path);
+
+            if entry.file_type().is_dir() {
+                fs::create_dir_all(&output_path).with_context(|| {
+                    format!("failed to create directory: {}", output_path.display())
+                })?;
+
+                continue;
+            }
+
+            if entry.file_type().is_file() {
+                self.process_file(&entry_path.to_path_buf(), derived_key, output_dir)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn process_path(&self, path: &PathBuf, derived_key: &[u8]) -> anyhow::Result<PathBuf> {
+        let tempdir = tempfile::Builder::new()
+            .prefix(ENCRYPTION_PREFIX)
+            .tempdir()
+            .context("failed to create temp directory")?;
+
+        match path.is_dir() {
+            true => self.process_directory(path, derived_key, tempdir.path())?,
+            false => self.process_file(path, derived_key, tempdir.path())?,
+        }
+
+        Ok(tempdir.keep())
+    }
+}

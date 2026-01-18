@@ -74,13 +74,9 @@ impl Hook for ZipHook {
 
                 let (_, file_path) = temp_file.keep().context("failed to persist temp file")?;
 
-                Ok(HookContext::new(
-                    file_path,
-                    &ctx.rclone_path,
-                    &ctx.remote_config,
-                    &ctx.path_config,
-                )
-                .with_metadata(HookContextMetadata::ZipChecksum, checksum))
+                Ok(ctx
+                    .with_path(file_path)
+                    .with_metadata(HookContextMetadata::ZipChecksum, checksum))
             }
 
             HookExecType::Pull => {
@@ -116,12 +112,7 @@ impl Hook for ZipHook {
                         .context("failed to copy contents")?;
                 }
 
-                Ok(HookContext::new(
-                    temp_dir.keep(),
-                    &ctx.rclone_path,
-                    &ctx.remote_config,
-                    &ctx.path_config,
-                ))
+                Ok(ctx.with_path(temp_dir.keep()))
             }
         }
     }
