@@ -27,6 +27,8 @@ pub fn execute_hooks(
     log_debug!("executing hooks: {:?}", hooks);
 
     for hook in hooks {
+        log_debug!("executing hook: {}", hook.hook_type());
+
         let hook: Box<dyn Hook> = Box::from(hook.clone());
         context = hook.process(context, config)?;
     }

@@ -133,15 +133,29 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
 
     log_debug!("final_path: {:?}", final_path);
 
+    let remote_dest = if final_name != options.paths.path_config.remote_path {
+        let parent = std::path::Path::new(&options.paths.path_config.remote_path)
+            .parent()
+            .unwrap_or(std::path::Path::new(""));
+
+        format!(
+            "{}:{}",
+            options.paths.remote.remote_name,
+            parent.join(final_name).to_string_lossy()
+        )
+    } else {
+        format!(
+            "{}:{}",
+            options.paths.remote.remote_name, options.paths.path_config.remote_path
+        )
+    };
+
     let status = utils::execute_rclone(
         options.paths.rclone,
         final_path
             .to_str()
             .context("failed to convert final_path to str")?,
-        &format!(
-            "{}:{}",
-            options.paths.remote.remote_name, options.paths.path_config.remote_path
-        ),
+        &remote_dest,
         None,
     )?;
 
@@ -165,10 +179,9 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
         .context("failed to execute transaction")?;
 
     log_success!(
-        "sent to remote {} -> {}:{}",
+        "sent to remote {} -> {}",
         options.paths.path_config.local_path,
-        options.paths.remote.remote_name,
-        options.paths.path_config.remote_path
+        remote_dest
     );
 
     Ok(())

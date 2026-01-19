@@ -87,9 +87,9 @@ impl EncryptionHook {
         let cipher = aes_gcm::Aes256Gcm::new_from_slice(&derived_key[..32])
             .context("failed to create cipher")?;
 
-        cipher
-            .decrypt(nonce, ciphertext)
-            .map_err(|_| anyhow::anyhow!("decryption failed: wrong password or corrupt data"))
+        cipher.decrypt(nonce, ciphertext).map_err(|e| {
+            anyhow::anyhow!("decryption failed: wrong password or corrupt data: {}", e)
+        })
     }
 
     fn process_file(
@@ -107,8 +107,20 @@ impl EncryptionHook {
         };
 
         let file_name = source.file_name().context("failed to get file name")?;
+        let file_name_str = file_name.to_string_lossy();
 
-        let output_path = output_dir.join(file_name);
+        let new_name = match self.exec {
+            HookExecType::Push => format!("{}.enc", file_name_str),
+            HookExecType::Pull => {
+                if let Some(stripped) = file_name_str.strip_suffix(".enc") {
+                    stripped.to_string()
+                } else {
+                    file_name_str.into_owned()
+                }
+            }
+        };
+
+        let output_path = output_dir.join(new_name);
 
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent).with_context(|| {
@@ -123,7 +135,7 @@ impl EncryptionHook {
         fs::write(&output_path, processed)
             .with_context(|| format!("failed to write processed file: {:?}", output_path))?;
 
-        log_info!("processed file: {:?}", file_name);
+        log_info!("processed file: {:?}", output_path.file_name().unwrap());
 
         Ok(())
     }
@@ -158,7 +170,9 @@ impl EncryptionHook {
             }
 
             if entry.file_type().is_file() {
-                self.process_file(&entry_path.to_path_buf(), derived_key, output_dir)?;
+                let parent = relative_path.parent().unwrap_or(Path::new(""));
+                let target_dir = output_dir.join(parent);
+                self.process_file(&entry_path.to_path_buf(), derived_key, &target_dir)?;
             }
         }
 
@@ -171,11 +185,22 @@ impl EncryptionHook {
             .tempdir()
             .context("failed to create temp directory")?;
 
-        match path.is_dir() {
-            true => self.process_directory(path, derived_key, tempdir.path())?,
-            false => self.process_file(path, derived_key, tempdir.path())?,
+        if path.is_dir() {
+            self.process_directory(path, derived_key, tempdir.path())?;
+            return Ok(tempdir.keep());
         }
 
-        Ok(tempdir.keep())
+        self.process_file(path, derived_key, tempdir.path())?;
+        let kept_dir = tempdir.keep();
+
+        let entries: Vec<_> = std::fs::read_dir(&kept_dir)?
+            .map(|e| e.unwrap().path())
+            .collect();
+
+        if entries.len() == 1 {
+            return Ok(entries[0].clone());
+        }
+
+        Ok(kept_dir)
     }
 }

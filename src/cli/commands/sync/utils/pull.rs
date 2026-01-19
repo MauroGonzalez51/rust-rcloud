@@ -45,9 +45,14 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
             options.paths.remote.remote_name, options.paths.path_config.remote_path
         ),
         Some(filename) => {
+            let parent = std::path::Path::new(&options.paths.path_config.remote_path)
+                .parent()
+                .unwrap_or(std::path::Path::new(""));
+
             format!(
-                "{}:{}/{}",
-                options.paths.remote.remote_name, options.paths.path_config.remote_path, filename
+                "{}:{}",
+                options.paths.remote.remote_name,
+                parent.join(filename).to_string_lossy()
             )
         }
     };

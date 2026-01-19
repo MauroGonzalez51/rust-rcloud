@@ -64,7 +64,7 @@ pub fn declare_hooks() -> anyhow::Result<(Vec<HookConfig>, Vec<HookConfig>)> {
 
                         match option.exec_type {
                             HookExecType::Push => push_hooks.push(hook_config),
-                            HookExecType::Pull => pull_hooks.insert(0, hook_config),
+                            HookExecType::Pull => pull_hooks.push(hook_config),
                         }
                     }
                 }
