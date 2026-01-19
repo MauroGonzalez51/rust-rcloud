@@ -7,6 +7,7 @@ macro_rules! register_hooks {
                 hook: $hook_ty:ty,
                 enum_type: $enum_val:path,
                 modifies_name: $modifies:expr,
+                share_config: $share_config:expr,
                 display: $display_fn:expr,
                 push_desc: $push_desc:literal,
                 pull_desc: $pull_desc:literal,
@@ -75,6 +76,14 @@ macro_rules! register_hooks {
                             $crate::config::hook_config::HookExecType::Push => $push_desc,
                             $crate::config::hook_config::HookExecType::Pull => $pull_desc,
                         },
+                    )*
+                }
+            }
+
+            pub fn share_config(&self) -> bool {
+                match self {
+                    $(
+                        $enum_val => $share_config,
                     )*
                 }
             }

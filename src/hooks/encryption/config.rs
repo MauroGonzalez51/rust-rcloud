@@ -1,3 +1,4 @@
+use crate::hooks::prelude::{HookBuilderSharedConfigTrait, HookBuilderTrait};
 use anyhow::Context;
 use argon2::PasswordHasher;
 use inquire::Password;
@@ -8,24 +9,22 @@ use crate::{
     log_info,
 };
 
-impl EncryptionHookConfig {
-    pub fn build(exec_type: HookExecType) -> anyhow::Result<HookConfig> {
-        log_info!("configuring {} for {}", Hooks::Encryption, exec_type);
+impl HookBuilderTrait for EncryptionHookConfig {
+    fn build(exec: HookExecType) -> anyhow::Result<HookConfig> {
+        log_info!("configuring {} for {}", Hooks::Encryption, exec);
 
-        let password = Password::new("Enter encryption password:")
-            .with_validator(inquire::validator::MinLengthValidator::new(1))
+        let password = Self::password()
             .prompt()
             .context("failed to get encryption password")?;
 
         let hash = Self::derive_hash(&password)?;
 
-        Ok(HookConfig::Encryption(Self {
-            exec: exec_type,
-            hash,
-        }))
+        Ok(HookConfig::Encryption(Self { exec, hash }))
     }
+}
 
-    pub fn build_both() -> anyhow::Result<(HookConfig, HookConfig)> {
+impl HookBuilderSharedConfigTrait for EncryptionHookConfig {
+    fn build_shared() -> anyhow::Result<(HookConfig, HookConfig)> {
         log_info!(
             "configuring {} for {}, {}",
             Hooks::Encryption,
@@ -33,8 +32,7 @@ impl EncryptionHookConfig {
             HookExecType::Pull
         );
 
-        let password = Password::new("Enter encryption password:")
-            .with_validator(inquire::validator::MinLengthValidator::new(1))
+        let password = Self::password()
             .prompt()
             .context("failed to get encryption password")?;
 
@@ -51,7 +49,9 @@ impl EncryptionHookConfig {
             }),
         ))
     }
+}
 
+impl EncryptionHookConfig {
     fn derive_hash(password: &str) -> anyhow::Result<String> {
         let salt_bytes: [u8; 16] = rand::random();
         let salt = argon2::password_hash::SaltString::encode_b64(&salt_bytes)
@@ -62,5 +62,10 @@ impl EncryptionHookConfig {
             .map_err(|e| anyhow::anyhow!("failed to hash password: {}", e))?;
 
         Ok(password_hash.to_string())
+    }
+
+    fn password() -> Password<'static> {
+        Password::new("Enter encryption password:")
+            .with_validator(inquire::validator::MinLengthValidator::new(1))
     }
 }

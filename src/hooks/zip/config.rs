@@ -1,26 +1,24 @@
 use crate::{
     config::prelude::{HookConfig, HookExecType, Hooks},
-    hooks::zip::ZipHookConfig,
+    hooks::prelude::{HookBuilderTrait, ZipHookConfig},
     log_info,
 };
 use anyhow::Context;
 use inquire::Text;
 
-impl ZipHookConfig {
-    pub fn build(exec_type: HookExecType) -> anyhow::Result<HookConfig> {
-        log_info!("configuring {} for {}", Hooks::Zip, exec_type);
+impl HookBuilderTrait for ZipHookConfig {
+    fn build(exec: HookExecType) -> anyhow::Result<HookConfig> {
+        log_info!("configuring {} for {}", Hooks::Zip, exec);
 
-        match exec_type {
+        match exec {
             HookExecType::Push => {
-                let level = Text::new("Compression level (0-9):")
-                    .with_default("9")
+                let level = Self::level()
                     .prompt()
                     .context("failed to get compression level")?
                     .parse::<i64>()
                     .context("failed to parse compresion level")?;
 
-                let exclude = Text::new("Exclude patterns: ")
-                    .with_help_message("comma-separated, glob only, optional")
+                let exclude = Self::exclude()
                     .prompt_skippable()
                     .context("failed to get exclude patterns")?;
 
@@ -43,5 +41,15 @@ impl ZipHookConfig {
                 exclude: None,
             })),
         }
+    }
+}
+
+impl ZipHookConfig {
+    fn level() -> Text<'static, 'static> {
+        Text::new("Compresion level (0-9):").with_default("9")
+    }
+
+    fn exclude() -> Text<'static, 'static> {
+        Text::new("Exclude patterns:").with_help_message("comma-separated, glob only, optional")
     }
 }
