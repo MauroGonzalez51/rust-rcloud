@@ -135,7 +135,14 @@ impl EncryptionHook {
         fs::write(&output_path, processed)
             .with_context(|| format!("failed to write processed file: {:?}", output_path))?;
 
-        log_info!("processed file: {:?}", output_path.file_name().unwrap());
+        match self.exec {
+            HookExecType::Push => {
+                log_info!("encrypted {:?} -> {:?}", source, output_path)
+            }
+            HookExecType::Pull => {
+                log_info!("decrypted {:?} -> {:?}", source, output_path)
+            }
+        }
 
         Ok(())
     }
@@ -186,8 +193,30 @@ impl EncryptionHook {
             .context("failed to create temp directory")?;
 
         if path.is_dir() {
-            self.process_directory(path, derived_key, tempdir.path())?;
-            return Ok(tempdir.keep());
+            let dir_name = path
+                .file_name()
+                .context("failed to resolve directory name")?
+                .to_string_lossy();
+
+            let normalized_dir_name = match self.exec {
+                HookExecType::Push => dir_name.into_owned(),
+                HookExecType::Pull => dir_name
+                    .strip_suffix(".enc")
+                    .map(str::to_string)
+                    .unwrap_or_else(|| dir_name.into_owned()),
+            };
+
+            let output_root = tempdir.path().join(&normalized_dir_name);
+            fs::create_dir_all(&output_root).with_context(|| {
+                format!(
+                    "failed to create root directory {} in temp output",
+                    output_root.display()
+                )
+            })?;
+
+            self.process_directory(path, derived_key, &output_root)?;
+
+            return Ok(tempdir.keep().join(normalized_dir_name));
         }
 
         self.process_file(path, derived_key, tempdir.path())?;

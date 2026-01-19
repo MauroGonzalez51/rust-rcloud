@@ -87,7 +87,22 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
                 _ => temp_dir.path().to_path_buf(),
             }
         }
-        Some(filename) => temp_dir.path().join(filename),
+        Some(filename) => {
+            let candidate = temp_dir.path().join(filename);
+            if candidate.exists() {
+                candidate
+            } else {
+                let entries: Vec<_> = std::fs::read_dir(temp_dir.path())
+                    .context("failed to read temp directory")?
+                    .filter_map(Result::ok)
+                    .collect();
+
+                match entries.len() {
+                    1 => entries[0].path(),
+                    _ => temp_dir.path().to_path_buf(),
+                }
+            }
+        }
     };
 
     log_debug!(

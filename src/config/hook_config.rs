@@ -71,7 +71,7 @@ register_hooks! {
         config: EncryptionHookConfig,
         hook: EncryptionHook,
         enum_type: Hooks::Encryption,
-        modifies_name: false,
+        modifies_name: true,
         share_config: true,
         display: |_cfg: &EncryptionHookConfig, f: &mut std::fmt::Formatter| write!(f, "Encryption"),
         push_desc: "Encrypt Path",
