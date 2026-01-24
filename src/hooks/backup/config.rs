@@ -18,7 +18,7 @@ impl HookBuilderTrait for BackupHookConfig {
 
         let local_path = match local_path {
             Some(value) => Some(
-                utils::path::expand_path(&value)?
+                utils::expand_path(&value)?
                     .to_string_lossy()
                     .to_string(),
             ),

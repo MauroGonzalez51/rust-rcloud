@@ -1,13 +1,11 @@
-use crate::hooks::prelude::{HookBuilderSharedConfigTrait, HookBuilderTrait};
+use crate::{
+    config::prelude::{HookConfig, HookExecType, Hooks},
+    hooks::prelude::{EncryptionHookConfig, HookBuilderSharedConfigTrait, HookBuilderTrait},
+    log_info,
+};
 use anyhow::Context;
 use argon2::PasswordHasher;
 use inquire::Password;
-
-use crate::{
-    config::prelude::{HookConfig, HookExecType, Hooks},
-    hooks::encryption::EncryptionHookConfig,
-    log_info,
-};
 
 impl HookBuilderTrait for EncryptionHookConfig {
     fn build(exec: HookExecType) -> anyhow::Result<HookConfig> {

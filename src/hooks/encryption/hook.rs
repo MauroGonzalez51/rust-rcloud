@@ -10,7 +10,7 @@ define_hook!(EncryptionHook {
 });
 
 impl Hook for EncryptionHook {
-    fn process(&self, ctx: HookContext, _cfg: &AppConfig) -> anyhow::Result<HookContext> {
+    fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext> {
         anyhow::ensure!(
             ctx.file_exists(),
             "source file does not exists: {:?}",
@@ -20,7 +20,7 @@ impl Hook for EncryptionHook {
         let derived_key = self.derive_key()?;
 
         let path = self
-            .process_path(&ctx.path, &derived_key)
+            .process_path(&ctx, cfg, &derived_key)
             .with_context(|| format!("failed to process path: {}", &ctx.path.display()))?;
 
         Ok(ctx.with_path(path))

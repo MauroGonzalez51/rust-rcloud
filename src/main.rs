@@ -4,7 +4,7 @@ mod hooks;
 mod tui;
 mod utils;
 
-use crate::{cli::run, utils::prelude::logger};
+use crate::{cli::run, utils::logger};
 use dotenvy::dotenv;
 
 fn main() {

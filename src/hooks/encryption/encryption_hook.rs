@@ -1,4 +1,8 @@
-use crate::{config::prelude::HookExecType, hooks::encryption::EncryptionHook, log_info};
+use crate::{
+    config::prelude::{AppConfig, HookExecType},
+    hooks::prelude::{EncryptionHook, HookContext},
+    log_info, utils,
+};
 use aes_gcm::{KeyInit, aead::Aead};
 use anyhow::Context;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
@@ -107,15 +111,15 @@ impl EncryptionHook {
         };
 
         let file_name = source.file_name().context("failed to get file name")?;
-        let file_name_str = file_name.to_string_lossy();
+        let file_name = file_name.to_string_lossy();
 
         let new_name = match self.exec {
-            HookExecType::Push => format!("{}.enc", file_name_str),
+            HookExecType::Push => format!("{}.enc", file_name),
             HookExecType::Pull => {
-                if let Some(stripped) = file_name_str.strip_suffix(".enc") {
+                if let Some(stripped) = file_name.strip_suffix(".enc") {
                     stripped.to_string()
                 } else {
-                    file_name_str.into_owned()
+                    file_name.into_owned()
                 }
             }
         };
@@ -136,12 +140,8 @@ impl EncryptionHook {
             .with_context(|| format!("failed to write processed file: {:?}", output_path))?;
 
         match self.exec {
-            HookExecType::Push => {
-                log_info!("encrypted {:?} -> {:?}", source, output_path)
-            }
-            HookExecType::Pull => {
-                log_info!("decrypted {:?} -> {:?}", source, output_path)
-            }
+            HookExecType::Push => log_info!("encrypted {:?} -> {:?}", source, output_path),
+            HookExecType::Pull => log_info!("decrypted {:?} -> {:?}", source, output_path),
         }
 
         Ok(())
@@ -186,14 +186,26 @@ impl EncryptionHook {
         Ok(())
     }
 
-    pub fn process_path(&self, path: &PathBuf, derived_key: &[u8]) -> anyhow::Result<PathBuf> {
-        let tempdir = tempfile::Builder::new()
-            .prefix(ENCRYPTION_PREFIX)
-            .tempdir()
-            .context("failed to create temp directory")?;
+    pub fn process_path(
+        &self,
+        ctx: &HookContext,
+        cfg: &AppConfig,
+        derived_key: &[u8],
+    ) -> anyhow::Result<PathBuf> {
+        let tempdir = match utils::Directories::tempdir(cfg.core.temp_path.clone())? {
+            Some(directory) => tempfile::Builder::new()
+                .prefix(ENCRYPTION_PREFIX)
+                .tempdir_in(&directory)
+                .with_context(|| format!("failed to create temp directory in {}", &directory.display()))?,
+            None => tempfile::Builder::new()
+                .prefix(ENCRYPTION_PREFIX)
+                .tempdir()
+                .context("failed to create temp directory")?,
+        };
 
-        if path.is_dir() {
-            let dir_name = path
+        if ctx.path.is_dir() {
+            let dir_name = ctx
+                .path
                 .file_name()
                 .context("failed to resolve directory name")?
                 .to_string_lossy();
@@ -214,12 +226,12 @@ impl EncryptionHook {
                 )
             })?;
 
-            self.process_directory(path, derived_key, &output_root)?;
+            self.process_directory(&ctx.path, derived_key, &output_root)?;
 
             return Ok(tempdir.keep().join(normalized_dir_name));
         }
 
-        self.process_file(path, derived_key, tempdir.path())?;
+        self.process_file(&ctx.path, derived_key, tempdir.path())?;
         let kept_dir = tempdir.keep();
 
         let entries: Vec<_> = std::fs::read_dir(&kept_dir)?
