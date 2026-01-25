@@ -55,7 +55,7 @@ pub fn declare_hooks() -> anyhow::Result<(Vec<HookConfig>, Vec<HookConfig>)> {
                         HookBuilder::new(hook_type, None).try_into()?;
 
                     push_hooks.push(push_config);
-                    pull_hooks.insert(0, pull_config);
+                    pull_hooks.push(pull_config);
                 }
                 false => {
                     for option in selected_options {

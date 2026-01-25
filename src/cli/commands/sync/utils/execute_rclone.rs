@@ -26,16 +26,18 @@ pub fn execute_rclone(
     target_path: &str,
     args: Option<&[&str]>,
 ) -> anyhow::Result<std::process::ExitStatus> {
-    let mut cmd_args = vec![
-        "copy",
-        source_path,
-        target_path,
+    let mut cmd_args = match std::path::Path::new(&source_path).is_file() {
+        true => vec!["copyto", source_path, target_path],
+        false => vec!["copy", source_path, target_path],
+    };
+
+    cmd_args.extend_from_slice(&[
         "--progress",
         "--checksum",
         "--delete-during",
         "--transfers=8",
         "--checkers=16",
-    ];
+    ]);
 
     if let Some(extra) = args {
         cmd_args.extend_from_slice(extra);
@@ -43,6 +45,8 @@ pub fn execute_rclone(
 
     std::process::Command::new(rclone_path)
         .args(cmd_args)
+        .stdout(std::process::Stdio::piped())
+        .stdin(std::process::Stdio::piped())
         .status()
-        .context("failed to execute rclone")
+        .context("failed to spawn rclone process")
 }

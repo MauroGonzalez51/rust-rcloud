@@ -48,6 +48,8 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
         }
     }
 
+    utils::check_hooks(options.hooks, &HookExecType::Push);
+
     let context = utils::execute_hooks(
         HookContext::new(
             PathBuf::from(&options.paths.path_config.local_path),

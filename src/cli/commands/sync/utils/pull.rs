@@ -111,7 +111,9 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
         downloaded_file.exists()
     );
 
-    let reversed_hooks: Vec<HookConfig> = options.hooks.iter().rev().cloned().collect();
+    utils::check_hooks(options.hooks, &HookExecType::Pull);
+
+    let reversed_hooks: Vec<_> = options.hooks.iter().rev().cloned().collect();
     let context = utils::execute_hooks(
         HookContext::new(
             downloaded_file,
