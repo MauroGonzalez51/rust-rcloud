@@ -6,7 +6,7 @@ use crate::{
     command_context,
     config::prelude::*,
     tui, use_handlers,
-    utils::prelude::{LogLevel, Logger, directories, logger},
+    utils::{LogLevel, Logger, directories, logger},
 };
 use anyhow::Context;
 use clap::{CommandFactory, Parser};

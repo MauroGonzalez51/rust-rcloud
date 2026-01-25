@@ -47,28 +47,25 @@ pub fn declare_hooks() -> anyhow::Result<(Vec<HookConfig>, Vec<HookConfig>)> {
                 .prompt()
                 .context("failed to select hook exec type")?;
 
-            for option in selected_options {
-                let exec_type = option.exec_type;
+            let should_share_config = selected_options.len() == 2 && hook_type.share_config();
 
-                match exec_type {
-                    HookExecType::Push => {
-                        push_hooks.push(
-                            HookBuilder::builder()
-                                .hook_type(Some(hook_type))
-                                .hook_exec_type(Some(exec_type))
-                                .build()
-                                .try_into()?,
-                        );
-                    }
-                    HookExecType::Pull => {
-                        pull_hooks.insert(
-                            0,
-                            HookBuilder::builder()
-                                .hook_type(Some(hook_type))
-                                .hook_exec_type(Some(exec_type))
-                                .build()
-                                .try_into()?,
-                        );
+            match should_share_config {
+                true => {
+                    let (push_config, pull_config): (HookConfig, HookConfig) =
+                        HookBuilder::new(hook_type, None).try_into()?;
+
+                    push_hooks.push(push_config);
+                    pull_hooks.push(pull_config);
+                }
+                false => {
+                    for option in selected_options {
+                        let hook_config: HookConfig =
+                            HookBuilder::new(hook_type, Some(option.exec_type)).try_into()?;
+
+                        match option.exec_type {
+                            HookExecType::Push => push_hooks.push(hook_config),
+                            HookExecType::Pull => pull_hooks.push(hook_config),
+                        }
                     }
                 }
             }

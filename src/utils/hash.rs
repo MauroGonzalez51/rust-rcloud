@@ -23,7 +23,7 @@ impl Hash {
             .filter_map(Result::ok)
             .filter(|e| e.file_type().is_file())
         {
-            let file_hash = Hash::hash_file(entry.path())
+            let file_hash = Self::hash_file(entry.path())
                 .with_context(|| format!("failed to hash file: {:?}", entry.path()))?;
 
             file_hashes.push(file_hash);
@@ -43,8 +43,8 @@ impl Hash {
         }
 
         match path.is_dir() {
-            true => Hash::hash_directory(path),
-            false => Hash::hash_file(path),
+            true => Self::hash_directory(path),
+            false => Self::hash_file(path),
         }
     }
 

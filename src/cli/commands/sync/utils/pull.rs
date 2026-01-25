@@ -45,9 +45,14 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
             options.paths.remote.remote_name, options.paths.path_config.remote_path
         ),
         Some(filename) => {
+            let parent = std::path::Path::new(&options.paths.path_config.remote_path)
+                .parent()
+                .unwrap_or(std::path::Path::new(""));
+
             format!(
-                "{}:{}/{}",
-                options.paths.remote.remote_name, options.paths.path_config.remote_path, filename
+                "{}:{}",
+                options.paths.remote.remote_name,
+                parent.join(filename).to_string_lossy()
             )
         }
     };
@@ -82,7 +87,22 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
                 _ => temp_dir.path().to_path_buf(),
             }
         }
-        Some(filename) => temp_dir.path().join(filename),
+        Some(filename) => {
+            let candidate = temp_dir.path().join(filename);
+            if candidate.exists() {
+                candidate
+            } else {
+                let entries: Vec<_> = std::fs::read_dir(temp_dir.path())
+                    .context("failed to read temp directory")?
+                    .filter_map(Result::ok)
+                    .collect();
+
+                match entries.len() {
+                    1 => entries[0].path(),
+                    _ => temp_dir.path().to_path_buf(),
+                }
+            }
+        }
     };
 
     log_debug!(
@@ -91,7 +111,9 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
         downloaded_file.exists()
     );
 
-    let reversed_hooks: Vec<HookConfig> = options.hooks.iter().rev().cloned().collect();
+    utils::check_hooks(options.hooks, &HookExecType::Pull);
+
+    let reversed_hooks: Vec<_> = options.hooks.iter().rev().cloned().collect();
     let context = utils::execute_hooks(
         HookContext::new(
             downloaded_file,

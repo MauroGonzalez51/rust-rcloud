@@ -39,6 +39,16 @@ impl HookContext {
         self
     }
 
+    pub fn with_path(&self, path: impl Into<PathBuf>) -> Self {
+        Self {
+            path: path.into(),
+            metadata: self.metadata.clone(),
+            rclone_path: self.rclone_path.clone(),
+            remote_config: self.remote_config.clone(),
+            path_config: self.path_config.clone(),
+        }
+    }
+
     pub fn file_exists(&self) -> bool {
         self.path.exists()
     }

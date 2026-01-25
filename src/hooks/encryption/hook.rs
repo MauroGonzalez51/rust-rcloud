@@ -3,13 +3,13 @@ use crate::{
     define_hook,
     hooks::prelude::HookContext,
 };
+use anyhow::Context;
 
-define_hook!(ZipHook {
-    level: Option<i64>,
-    exclude: Option<Vec<String>>,
+define_hook!(EncryptionHook {
+    hash: String,
 });
 
-impl Hook for ZipHook {
+impl Hook for EncryptionHook {
     fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext> {
         anyhow::ensure!(
             ctx.file_exists(),
@@ -17,6 +17,12 @@ impl Hook for ZipHook {
             &ctx.path
         );
 
-        self.process_path(&ctx, cfg)
+        let derived_key = self.derive_key()?;
+
+        let path = self
+            .process_path(&ctx, cfg, &derived_key)
+            .with_context(|| format!("failed to process path: {}", &ctx.path.display()))?;
+
+        Ok(ctx.with_path(path))
     }
 }

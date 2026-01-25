@@ -47,7 +47,7 @@ pub fn path_add(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
             .context("failed to get local path")?,
     };
 
-    let local_path = utils::path::expand_path(local_path)?
+    let local_path = utils::expand_path(local_path)?
         .to_string_lossy()
         .to_string();
 

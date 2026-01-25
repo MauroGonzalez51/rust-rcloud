@@ -1,7 +1,7 @@
 use crate::log_warn;
 use anyhow::Context;
 use directories::ProjectDirs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Default)]
 pub struct Directories {
@@ -33,6 +33,25 @@ impl Directories {
         }
 
         Ok(Self::default())
+    }
+
+    pub fn tempdir<P>(custom_path: Option<P>) -> anyhow::Result<Option<PathBuf>>
+    where
+        P: AsRef<Path>,
+    {
+        if let Some(path) = custom_path {
+            let path = path.as_ref();
+
+            if !path.exists() {
+                std::fs::create_dir_all(path).with_context(|| {
+                    format!("failed to create custom temp directory: {}", path.display())
+                })?;
+            }
+
+            return Ok(Some(path.to_path_buf()));
+        }
+
+        Ok(None)
     }
 }
 

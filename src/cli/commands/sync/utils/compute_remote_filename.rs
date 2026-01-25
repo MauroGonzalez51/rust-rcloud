@@ -16,17 +16,12 @@ use crate::config::prelude::{HookConfig, Hooks};
 /// assert_eq!(filename, "backup.zip");
 /// ```
 pub fn compute_remote_filename(hooks: &[HookConfig], base_name: &str) -> String {
-    if hooks.is_empty() {
-        return base_name.to_string();
-    }
-
-    let last = hooks.iter().rfind(|hook| hook.modifies_filename());
-
-    match last {
-        Some(hook) => match hook.hook_type() {
-            Hooks::Zip => format!("{}.zip", base_name),
-            _ => base_name.to_string(),
-        },
-        None => base_name.to_string(),
-    }
+    hooks
+        .iter()
+        .filter(|hook| hook.modifies_filename())
+        .fold(base_name.to_string(), |acc, hook| match hook.hook_type() {
+            Hooks::Zip => format!("{}.zip", acc),
+            Hooks::Encryption => format!("{}.enc", acc),
+            _ => acc,
+        })
 }
