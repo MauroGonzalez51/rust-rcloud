@@ -1,0 +1,45 @@
+# Maintainer: MauroGonzalez51
+pkgname=rcloud-git
+pkgver=0.5.0
+pkgrel=1
+pkgdesc="CLI wrapper for rclone (built from source, latest git)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/MauroGonzalez51/rust-rcloud"
+license=('MIT')
+depends=('rclone' 'gcc-libs')
+makedepends=('cargo' 'git')
+provides=('rcloud')
+conflicts=('rcloud' 'rcloud-bin')
+source=("$pkgname::git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$pkgname"
+    git describe --long --tags --abbrev=7 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' \
+        || printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+prepare() {
+    cd "$pkgname"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+    cd "$pkgname"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    cargo build --frozen --release --all-features
+}
+
+check() {
+    cd "$pkgname"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo test --frozen --release --all-features
+}
+
+package() {
+    cd "$pkgname"
+    install -Dm0755 -t "$pkgdir/usr/bin/" "target/release/rcloud"
+    install -Dm0644 README.md "$pkgdir/usr/share/doc/rcloud/README.md"
+}

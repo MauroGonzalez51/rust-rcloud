@@ -1,0 +1,19 @@
+pkgbase = rcloud-bin
+	pkgdesc = CLI wrapper for rclone (prebuilt binary)
+	pkgver = 0.5.0
+	pkgrel = 1
+	url = https://github.com/MauroGonzalez51/rust-rcloud
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	depends = rclone
+	depends = gcc-libs
+	provides = rcloud
+	conflicts = rcloud
+	conflicts = rcloud-git
+	source_x86_64 = rcloud-bin-0.5.0-x86_64.tar.xz::https://github.com/MauroGonzalez51/rust-rcloud/releases/download/v0.5.0/rcloud-x86_64-unknown-linux-gnu.tar.xz
+	sha256sums_x86_64 = b141e88dd39c8a97ff02b2ae74ed6fdccb3e03cf48ee6cc03fd27ba630e7bdb0
+	source_aarch64 = rcloud-bin-0.5.0-aarch64.tar.xz::https://github.com/MauroGonzalez51/rust-rcloud/releases/download/v0.5.0/rcloud-aarch64-unknown-linux-gnu.tar.xz
+	sha256sums_aarch64 = 928873d990b294dfc590a8fec6eb77b8bfb4494d868a9600f46c6b8e0cdfddc2
+
+pkgname = rcloud-bin

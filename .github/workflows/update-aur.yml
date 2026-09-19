@@ -1,0 +1,63 @@
+name: Update AUR PKGBUILD
+
+# Runs after a GitHub Release is published (cargo-dist creates it once the
+# artifacts and their .sha256 sidecars are uploaded). This updates the
+# rcloud-bin PKGBUILD/.SRCINFO in-repo and commits the change.
+# Publishing to the AUR remains a manual step.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to pin (without leading v), e.g. 0.5.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  update-pkgbuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            v="${{ github.event.release.tag_name }}"
+          else
+            v="${{ github.event.inputs.version }}"
+          fi
+          v="${v#v}"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Update rcloud-bin PKGBUILD
+        # Runs the same script used locally. makepkg is absent on the runner,
+        # so .SRCINFO is regenerated in the dedicated step below.
+        run: bash packaging/scripts/update-aur-bin.sh "${{ steps.version.outputs.version }}"
+
+      - name: Regenerate .SRCINFO
+        uses: heyhusen/archlinux-package-action@v3
+        with:
+          path: packaging/aur/rcloud-bin
+          flags: ""
+          namcap: false
+          srcinfo: true
+
+      - name: Commit changes
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- packaging/aur/rcloud-bin; then
+            echo "No PKGBUILD changes."
+            exit 0
+          fi
+          git add packaging/aur/rcloud-bin/PKGBUILD packaging/aur/rcloud-bin/.SRCINFO
+          git commit -m "chore(aur): update rcloud-bin to ${{ steps.version.outputs.version }}"
+          git push origin master
