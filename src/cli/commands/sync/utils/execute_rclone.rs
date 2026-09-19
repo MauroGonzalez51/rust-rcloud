@@ -19,7 +19,7 @@ use anyhow::Context;
 ///     "remote:path",
 ///     Some(&["--dry-run"]),
 /// )?;
-/// ``
+/// ```
 pub fn execute_rclone(
     rclone_path: &str,
     source_path: &str,
@@ -34,7 +34,6 @@ pub fn execute_rclone(
     cmd_args.extend_from_slice(&[
         "--progress",
         "--checksum",
-        "--delete-during",
         "--transfers=8",
         "--checkers=16",
     ]);
