@@ -7,9 +7,12 @@ use crate::{
 use inquire_derive::Selectable;
 use serde::{Deserialize, Serialize};
 
+/// Where a backup replica is stored.
 #[derive(Debug, Clone, Serialize, Deserialize, Copy, Selectable, PartialEq)]
 pub enum BackupType {
+    /// Replica kept on the local filesystem.
     Local,
+    /// Replica kept on the remote.
     Remote,
 }
 
@@ -29,6 +32,11 @@ define_hook!(BackupHook {
     replicas: u32,
 });
 
+/// Creates rotated backup replicas on local and/or remote storage.
+///
+/// Unlike the other hooks this does not change the context path: it copies the
+/// current content into timestamped replicas and prunes old ones down to the
+/// configured `replicas` count. Runs on both push and pull.
 impl Hook for BackupHook {
     fn process(&self, ctx: HookContext, _cfg: &AppConfig) -> anyhow::Result<HookContext> {
         anyhow::ensure!(

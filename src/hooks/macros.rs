@@ -1,3 +1,37 @@
+/// Wires a set of hook kinds into the type system in one place.
+///
+/// For every entry it generates:
+/// - a variant on the serde-tagged `HookConfig` enum (`#[serde(tag = "type")]`),
+/// - `From<HookConfig> for Box<dyn Hook>` so a stored config becomes a runnable hook,
+/// - `HookConfig::modifies_filename`, `exec_type`, `hook_type`, and `Display`,
+/// - `Hooks::describe` (per-direction help text) and `Hooks::share_config`.
+///
+/// # Fields
+/// - `config` / `hook`: the `XHookConfig` (serialized) and `XHook` (runtime) types,
+///   typically produced by [`crate::define_hook!`].
+/// - `enum_type`: the matching [`Hooks`](crate::config::prelude::Hooks) variant.
+/// - `modifies_name`: whether the hook changes the output filename
+///   (drives [`compute_remote_filename`](crate::cli::commands::sync::utils::compute_remote_filename())).
+/// - `share_config`: whether a single interactive setup can produce both the
+///   push and pull configs at once.
+/// - `display`: closure rendering the config for listings.
+/// - `push_desc` / `pull_desc`: help strings shown when selecting the hook.
+///
+/// # Example
+/// ```rust, ignore
+/// register_hooks! {
+///     Zip {
+///         config: ZipHookConfig,
+///         hook: ZipHook,
+///         enum_type: Hooks::Zip,
+///         modifies_name: true,
+///         share_config: false,
+///         display: |cfg: &ZipHookConfig, f: &mut std::fmt::Formatter| write!(f, "Zip"),
+///         push_desc: "Compress before uploading",
+///         pull_desc: "Extract after downloading",
+///     },
+/// }
+/// ```
 #[macro_export]
 macro_rules! register_hooks {
     (
@@ -91,6 +125,28 @@ macro_rules! register_hooks {
     };
 }
 
+/// Generates the paired config and runtime structs for a hook.
+///
+/// Given `Name { field: Type, ... }` it produces:
+/// - `NameConfig`: `Serialize`/`Deserialize` struct with an `exec:
+///   HookExecType` field plus the declared fields — this is what lives in the
+///   registry JSON.
+/// - `Name`: the runtime struct with the same fields.
+/// - `From<NameConfig> for Name`: converts the stored config into the runnable
+///   hook.
+///
+/// You still implement [`Hook`](crate::config::prelude::Hook) for `Name` and
+/// [`HookBuilderTrait`](crate::hooks::prelude::HookBuilderTrait) for
+/// `NameConfig`, then register both with [`crate::register_hooks!`].
+///
+/// # Example
+/// ```rust, ignore
+/// define_hook!(ZipHook {
+///     level: Option<i64>,
+///     exclude: Option<Vec<String>>,
+/// });
+/// // Expands to ZipHookConfig { exec, level, exclude } and ZipHook { .. }.
+/// ```
 #[macro_export]
 macro_rules! define_hook {
     (

@@ -9,6 +9,11 @@ define_hook!(ZipHook {
     exclude: Option<Vec<String>>,
 });
 
+/// Compresses (push) or extracts (pull) the context path with Zstd.
+///
+/// On push the source is packed into a single archive and a
+/// [`ZipChecksum`](crate::hooks::prelude::HookContextMetadata::ZipChecksum) is
+/// recorded; on pull the archive is unpacked into a temp directory.
 impl Hook for ZipHook {
     fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext> {
         anyhow::ensure!(

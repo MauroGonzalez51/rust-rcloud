@@ -31,6 +31,15 @@ use_handlers! {
     }
 }
 
+/// Entry point of the CLI.
+///
+/// Parses arguments, initializes logging, loads the [`AppConfig`] and
+/// [`Registry`], builds a [`CommandContext`](crate::cli::context::CommandContext),
+/// and dispatches to the matching command handler. With no subcommand it
+/// launches the interactive TUI.
+///
+/// # Errors
+/// Propagates any error from config/registry loading or the invoked handler.
 pub fn run() -> anyhow::Result<(), anyhow::Error> {
     let args = Cli::parse();
 
