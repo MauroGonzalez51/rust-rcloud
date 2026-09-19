@@ -121,39 +121,7 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
                 .with_context(|| format!("failed to get parent path for: {:?}", context.path))?
                 .join(&final_name);
 
-            if renamed_path.exists() {
-                log_debug!("removing existing target path from previous runs");
-                match renamed_path.is_dir() {
-                    true => std::fs::remove_dir_all(&renamed_path)
-                        .context("failed to clean up existing temp directory")?,
-                    false => std::fs::remove_file(&renamed_path)
-                        .context("failed to clean up existing temp file")?,
-                }
-            }
-
-            if context.path.is_file() && std::fs::rename(&context.path, &renamed_path).is_err() {
-                fs_extra::file::move_file(
-                    &context.path,
-                    &renamed_path,
-                    &fs_extra::file::CopyOptions::new().overwrite(true),
-                )
-                .context("failed to move file")?;
-            }
-
-            if context.path.is_dir() && std::fs::rename(&context.path, &renamed_path).is_err() {
-                fs_extra::dir::move_dir(
-                    &context.path,
-                    &renamed_path,
-                    &fs_extra::dir::CopyOptions::new().overwrite(true),
-                )
-                .with_context(|| {
-                    format!(
-                        "failed to move directory {} to {}",
-                        context.path.display(),
-                        renamed_path.display()
-                    )
-                })?;
-            }
+            utils::rename_within(&context.path, &renamed_path)?;
 
             renamed_path
         }

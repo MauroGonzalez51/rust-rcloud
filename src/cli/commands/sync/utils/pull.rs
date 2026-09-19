@@ -98,35 +98,8 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
 
     log_info!("running post-transaction hooks");
 
-    let downloaded_file = match &remote_filename {
-        None => {
-            let entries: Vec<_> = std::fs::read_dir(temp_dir.path())
-                .context("failed to read temp directory")?
-                .filter_map(Result::ok)
-                .collect();
-
-            match entries.len() {
-                1 => entries[0].path(),
-                _ => temp_dir.path().to_path_buf(),
-            }
-        }
-        Some(filename) => {
-            let candidate = temp_dir.path().join(filename);
-            if candidate.exists() {
-                candidate
-            } else {
-                let entries: Vec<_> = std::fs::read_dir(temp_dir.path())
-                    .context("failed to read temp directory")?
-                    .filter_map(Result::ok)
-                    .collect();
-
-                match entries.len() {
-                    1 => entries[0].path(),
-                    _ => temp_dir.path().to_path_buf(),
-                }
-            }
-        }
-    };
+    let downloaded_file =
+        utils::find_downloaded(temp_dir.path(), remote_filename.as_deref())?;
 
     log_debug!(
         "downloaded_file: {:?} (exists: {})",
@@ -191,46 +164,7 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
         context.path.exists()
     );
 
-    if let Some(parent) = std::path::Path::new(&options.paths.path_config.local_path).parent() {
-        std::fs::create_dir_all(parent).context("failed to create parent directory")?;
-    }
-
-    if context.path.is_file() {
-        fs_extra::file::move_file(
-            &context.path,
-            &options.paths.path_config.local_path,
-            &fs_extra::file::CopyOptions::new(),
-        )
-        .with_context(|| {
-            format!(
-                "failed to move file to {}",
-                options.paths.path_config.local_path
-            )
-        })?;
-    }
-
-    if context.path.is_dir() {
-        if !std::path::Path::new(&options.paths.path_config.local_path).exists() {
-            std::fs::create_dir_all(&options.paths.path_config.local_path)
-                .context("failed to create destination directory")?;
-        }
-
-        fs_extra::dir::copy(
-            &context.path,
-            &options.paths.path_config.local_path,
-            &fs_extra::dir::CopyOptions::new()
-                .overwrite(true)
-                .content_only(true),
-        )
-        .with_context(|| {
-            format!(
-                "failed to move directory to {}",
-                options.paths.path_config.local_path
-            )
-        })?;
-
-        std::fs::remove_dir_all(&context.path).context("failed to remove temp directory")?;
-    }
+    utils::restore_to(&context.path, &options.paths.path_config.local_path)?;
 
     options
         .registry
