@@ -31,3 +31,68 @@ pub fn rotate_local_replicas(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn replica(dir: &std::path::Path, timestamp: u64, n: u32) -> BackupHookReplica {
+        let path = dir.join(format!("{}.{}", timestamp, n));
+        fs::write(&path, b"x").unwrap();
+        BackupHookReplica {
+            path,
+            timestamp,
+            replica_number: n,
+        }
+    }
+
+    #[test]
+    fn keeps_all_when_below_max() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let mut replicas = vec![replica(dir.path(), 100, 1)];
+
+        // max=3, only 1 present -> nothing removed.
+        rotate_local_replicas(&mut replicas, 3)?;
+        assert!(replicas[0].path.exists());
+        Ok(())
+    }
+
+    #[test]
+    fn prunes_oldest_to_make_room_at_max() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        // At max (3 present, max=3): removes (3-3)+1 = 1 oldest.
+        let r_old = replica(dir.path(), 100, 1);
+        let r_mid = replica(dir.path(), 200, 2);
+        let r_new = replica(dir.path(), 300, 3);
+        let mut replicas = vec![r_mid, r_new, r_old];
+
+        rotate_local_replicas(&mut replicas, 3)?;
+
+        // Oldest (timestamp 100) is gone; the two newest remain.
+        assert!(!dir.path().join("100.1").exists());
+        assert!(dir.path().join("200.2").exists());
+        assert!(dir.path().join("300.3").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn prunes_multiple_when_over_max() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        // 4 present, max=2: removes (4-2)+1 = 3 oldest, leaving the newest.
+        let mut replicas = vec![
+            replica(dir.path(), 100, 1),
+            replica(dir.path(), 200, 2),
+            replica(dir.path(), 300, 3),
+            replica(dir.path(), 400, 4),
+        ];
+
+        rotate_local_replicas(&mut replicas, 2)?;
+
+        assert!(!dir.path().join("100.1").exists());
+        assert!(!dir.path().join("200.2").exists());
+        assert!(!dir.path().join("300.3").exists());
+        assert!(dir.path().join("400.4").exists());
+        Ok(())
+    }
+}

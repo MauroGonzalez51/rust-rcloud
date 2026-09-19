@@ -32,3 +32,35 @@ pub fn parse_replica(
         replica_number,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    fn re() -> regex::Regex {
+        regex::Regex::new(r"^(\d+)\.(\d+)$").unwrap()
+    }
+
+    #[test]
+    fn parses_timestamp_and_replica_number() {
+        let replica = parse_replica(Path::new("/backups/1700000000.3"), &re()).unwrap();
+        assert_eq!(replica.timestamp, 1_700_000_000);
+        assert_eq!(replica.replica_number, 3);
+        assert_eq!(replica.path, Path::new("/backups/1700000000.3"));
+    }
+
+    #[test]
+    fn rejects_non_matching_name() {
+        assert!(parse_replica(Path::new("/backups/not-a-replica"), &re()).is_err());
+        assert!(parse_replica(Path::new("/backups/123"), &re()).is_err());
+        assert!(parse_replica(Path::new("/backups/1700000000.3.txt"), &re()).is_err());
+    }
+
+    #[test]
+    fn overflowing_timestamp_errors() {
+        // Larger than u64::MAX -> parse failure.
+        let name = "99999999999999999999999999.1";
+        assert!(parse_replica(Path::new(name), &re()).is_err());
+    }
+}
