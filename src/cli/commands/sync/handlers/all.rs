@@ -2,9 +2,10 @@ use crate::{
     cli::{
         commands::{path::utils::tags, sync::handlers::single},
         context::CommandContext,
+        output::OutputSink,
         prompter::Prompter,
     },
-    log_error, log_info, log_warn,
+    log_error, log_info,
 };
 use anyhow::Context;
 
@@ -13,9 +14,10 @@ pub struct LocalArgs<'a> {
     pub tags: &'a [String],
 }
 
-pub fn sync_all<P: Prompter>(
+pub fn sync_all<P: Prompter, S: OutputSink>(
     mut context: CommandContext<LocalArgs>,
     prompter: &P,
+    sink: &S,
 ) -> anyhow::Result<()> {
     let tags = match context.local.tags.is_empty() {
         true => tags::select_tags(prompter, std::sync::Arc::clone(&context.registry))?,
@@ -38,7 +40,7 @@ pub fn sync_all<P: Prompter>(
             .collect(),
     };
 
-    log_info!("found {} path(s) to sync", matching_paths_ids.len());
+    sink.info(format!("found {} path(s) to sync", matching_paths_ids.len()));
 
     for path_id in matching_paths_ids {
         let path_info = context
@@ -60,10 +62,9 @@ pub fn sync_all<P: Prompter>(
 
             let path_context = context.with_args(args);
 
-            match single::sync_single(path_context, prompter) {
+            match single::sync_single(path_context, prompter, sink) {
                 Ok(_context) => {
                     context.registry = _context.registry;
-                    log_info!("synced {} -> {}", local_path, remote_path);
                 }
                 Err(err) => {
                     log_error!(
@@ -72,13 +73,17 @@ pub fn sync_all<P: Prompter>(
                         remote_path,
                         err
                     );
+                    sink.error(format!(
+                        "error syncing {} -> {}: {}",
+                        local_path, remote_path, err
+                    ));
 
                     let should_continue = prompter
                         .confirm("continue?", true)
                         .context("failed to get confirmation")?;
 
                     if !should_continue {
-                        log_warn!("sync aborted by user");
+                        sink.warn("sync aborted by user");
                         break;
                     }
                 }

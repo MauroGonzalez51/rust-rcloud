@@ -1,7 +1,10 @@
 use crate::{
-    cli::{commands::remote::utils::remote, context::CommandContext, prompter::Prompter},
+    cli::{
+        commands::remote::utils::remote, context::CommandContext, output::OutputSink,
+        prompter::Prompter,
+    },
     config::prelude::*,
-    log_debug, log_success,
+    log_debug,
 };
 use anyhow::Context;
 use uuid::Uuid;
@@ -21,9 +24,10 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn remote_add<P: Prompter>(
+pub fn remote_add<P: Prompter, S: OutputSink>(
     context: CommandContext<LocalArgs>,
     prompter: &P,
+    sink: &S,
 ) -> anyhow::Result<()> {
     let remote_name = match context.local.name {
         Some(value) => value.clone(),
@@ -35,7 +39,7 @@ pub fn remote_add<P: Prompter>(
         None => remote::Prompt::provider(prompter).context("failed to create prompt")?,
     };
 
-    log_debug!("[ INFO ] adding remote '{remote_name}' ({provider}) to registry");
+    log_debug!("adding remote '{remote_name}' ({provider}) to registry");
 
     context
         .with_registry()?
@@ -48,7 +52,7 @@ pub fn remote_add<P: Prompter>(
         })
         .context("error inside transaction")?;
 
-    log_success!("remote added succesfully");
+    sink.success("remote added succesfully");
 
     Ok(())
 }

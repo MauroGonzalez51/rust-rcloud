@@ -1,6 +1,9 @@
 use crate::{
-    cli::{commands::remote::utils::remote, context::CommandContext, prompter::Prompter},
-    log_debug, log_info, log_success, log_warn,
+    cli::{
+        commands::remote::utils::remote, context::CommandContext, output::OutputSink,
+        prompter::Prompter,
+    },
+    log_debug, log_info, log_warn,
 };
 use anyhow::Context;
 
@@ -21,12 +24,14 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn remote_update<P: Prompter>(
+pub fn remote_update<P: Prompter, S: OutputSink>(
     context: CommandContext<LocalArgs>,
     prompter: &P,
+    sink: &S,
 ) -> anyhow::Result<()> {
     if context.with_registry()?.remotes.is_empty() {
         log_warn!("no remotes configured");
+        sink.warn("no remotes configured");
         return Ok(());
     }
 
@@ -77,7 +82,7 @@ pub fn remote_update<P: Prompter>(
         })
         .context("failed to execute transaction")?;
 
-    log_success!("remote updated succesfully");
+    sink.success("remote updated succesfully");
 
     Ok(())
 }

@@ -79,26 +79,32 @@ pub fn run() -> anyhow::Result<(), anyhow::Error> {
 
     let context = command_context!(app_config, global, registry);
     let prompter = crate::cli::prompter::InquirePrompter;
+    let sink = crate::cli::output::StdoutSink;
 
     match &command {
         Some(cmd) => match cmd {
             Commands::Remote { action } => match action {
                 commands::remote::command::RemoteCommand::List => {
-                    remote_list(context)?;
+                    remote_list(context, &sink)?;
                 }
 
                 commands::remote::command::RemoteCommand::Add { name, provider } => {
-                    remote_add(context.with_args(RemoteAddArgs { name, provider }), &prompter)?;
+                    remote_add(
+                        context.with_args(RemoteAddArgs { name, provider }),
+                        &prompter,
+                        &sink,
+                    )?;
                 }
 
                 commands::remote::command::RemoteCommand::Remove { id } => {
-                    remote_remove(context.with_args(RemoteRemoveArgs { id }), &prompter)?
+                    remote_remove(context.with_args(RemoteRemoveArgs { id }), &prompter, &sink)?
                 }
 
                 commands::remote::command::RemoteCommand::Update { id, name, provider } => {
                     remote_update(
                         context.with_args(RemoteUpdateArgs { id, name, provider }),
                         &prompter,
+                        &sink,
                     )?;
                 }
 
@@ -106,13 +112,14 @@ pub fn run() -> anyhow::Result<(), anyhow::Error> {
                     remote_ls(
                         context.with_args(RemoteLsArgs { path, path_config }),
                         &prompter,
+                        &sink,
                     )?;
                 }
             },
 
             Commands::Path { action } => match action {
                 commands::path::command::PathCommand::List => {
-                    path_list(context)?;
+                    path_list(context, &sink)?;
                 }
 
                 commands::path::command::PathCommand::Add {
@@ -127,17 +134,22 @@ pub fn run() -> anyhow::Result<(), anyhow::Error> {
                             remote_path,
                         }),
                         &prompter,
+                        &sink,
                     )?;
                 }
 
                 commands::path::command::PathCommand::Remove { id } => {
-                    path_remove(context.with_args(PathRemoveArgs { path_id: id }), &prompter)?;
+                    path_remove(
+                        context.with_args(PathRemoveArgs { path_id: id }),
+                        &prompter,
+                        &sink,
+                    )?;
                 }
             },
 
             Commands::Sync { action } => match action {
                 commands::sync::command::SyncCommand::All { tags } => {
-                    sync_all(context.with_args(SyncAllArgs { tags }), &prompter)?;
+                    sync_all(context.with_args(SyncAllArgs { tags }), &prompter, &sink)?;
                 }
 
                 commands::sync::command::SyncCommand::Path {
@@ -154,11 +166,12 @@ pub fn run() -> anyhow::Result<(), anyhow::Error> {
                             clean: if *clean { &Some(true) } else { &None },
                         }),
                         &prompter,
+                        &sink,
                     )?;
                 }
             },
 
-            Commands::Configure => configure_setup(context, &prompter)?,
+            Commands::Configure => configure_setup(context, &prompter, &sink)?,
 
             Commands::Completion { shell } => {
                 let mut cmd = Cli::command();

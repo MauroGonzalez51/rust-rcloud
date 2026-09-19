@@ -1,6 +1,9 @@
 use crate::{
-    cli::{commands::path::utils::path, context::CommandContext, prompter::Prompter},
-    log_info, log_success, log_warn,
+    cli::{
+        commands::path::utils::path, context::CommandContext, output::OutputSink,
+        prompter::Prompter,
+    },
+    log_warn,
 };
 use anyhow::Context;
 
@@ -15,12 +18,14 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn path_remove<P: Prompter>(
+pub fn path_remove<P: Prompter, S: OutputSink>(
     context: CommandContext<LocalArgs>,
     prompter: &P,
+    sink: &S,
 ) -> anyhow::Result<()> {
     if context.with_registry()?.paths.is_empty() {
         log_warn!("no paths configured");
+        sink.warn("no paths configured");
         return Ok(());
     }
 
@@ -42,7 +47,10 @@ pub fn path_remove<P: Prompter>(
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("path not found"))?;
 
-    log_info!("Removing path: {} -> {}", path.local_path, path.remote_path);
+    sink.info(format!(
+        "Removing path: {} -> {}",
+        path.local_path, path.remote_path
+    ));
 
     context
         .with_registry()?
@@ -51,7 +59,7 @@ pub fn path_remove<P: Prompter>(
         })
         .context("failed to execute transaction")?;
 
-    log_success!("path removed successfully");
+    sink.success("path removed successfully");
 
     Ok(())
 }

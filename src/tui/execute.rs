@@ -1,5 +1,5 @@
 use crate::{
-    cli::{context::CommandContext, prompter::Prompter},
+    cli::{context::CommandContext, output::OutputSink, prompter::Prompter},
     command_context,
     tui::commands::{
         PathMenuVariant, RemoteMenuVariant, RootMenu, RootMenuOptions, SyncMenuVariant,
@@ -29,10 +29,11 @@ use_handlers! {
     }
 }
 
-pub fn execute<P: Prompter>(
+pub fn execute<P: Prompter, S: OutputSink>(
     context: CommandContext,
     action: &RootMenu,
     prompter: &P,
+    sink: &S,
 ) -> anyhow::Result<ExecutePostOperation> {
     match action {
         RootMenu::Options(variant) => match variant {
@@ -40,11 +41,10 @@ pub fn execute<P: Prompter>(
         },
         RootMenu::Path(variant) => match variant {
             PathMenuVariant::List => {
-                path_list(command_context!(
-                    context.config,
-                    context.global,
-                    context.registry
-                ))?;
+                path_list(
+                    command_context!(context.config, context.global, context.registry),
+                    sink,
+                )?;
             }
             PathMenuVariant::Add => {
                 path_add(
@@ -54,7 +54,8 @@ pub fn execute<P: Prompter>(
                         context.registry,
                         PathAddArgs::default()
                     ),
-                    &prompter,
+                    prompter,
+                    sink,
                 )?;
             }
             PathMenuVariant::Remove => {
@@ -65,18 +66,18 @@ pub fn execute<P: Prompter>(
                         context.registry,
                         PathRemoveArgs::default()
                     ),
-                    &prompter,
+                    prompter,
+                    sink,
                 )?;
             }
             _ => unreachable!(),
         },
         RootMenu::Remote(variant) => match variant {
             RemoteMenuVariant::List => {
-                remote_list(command_context!(
-                    context.config,
-                    context.global,
-                    context.registry
-                ))?;
+                remote_list(
+                    command_context!(context.config, context.global, context.registry),
+                    sink,
+                )?;
             }
             RemoteMenuVariant::Ls => {
                 remote_ls(
@@ -86,7 +87,8 @@ pub fn execute<P: Prompter>(
                         context.registry,
                         RemoteLsArgs::default()
                     ),
-                    &prompter,
+                    prompter,
+                    sink,
                 )?;
             }
             RemoteMenuVariant::Add => {
@@ -97,7 +99,8 @@ pub fn execute<P: Prompter>(
                         context.registry,
                         RemoteAddArgs::default()
                     ),
-                    &prompter,
+                    prompter,
+                    sink,
                 )?;
             }
             RemoteMenuVariant::Remove => {
@@ -108,7 +111,8 @@ pub fn execute<P: Prompter>(
                         context.registry,
                         RemoteRemoveArgs::default()
                     ),
-                    &prompter,
+                    prompter,
+                    sink,
                 )?;
             }
             RemoteMenuVariant::Update => {
@@ -119,7 +123,8 @@ pub fn execute<P: Prompter>(
                         context.registry,
                         RemoteUpdateArgs::default()
                     ),
-                    &prompter,
+                    prompter,
+                    sink,
                 )?;
             }
             _ => unreachable!(),
@@ -133,7 +138,8 @@ pub fn execute<P: Prompter>(
                         context.registry,
                         SyncSingleArgs::default()
                     ),
-                    &prompter,
+                    prompter,
+                    sink,
                 )?;
             }
             SyncMenuVariant::All => {
@@ -144,7 +150,8 @@ pub fn execute<P: Prompter>(
                         context.registry,
                         SyncAllArgs::default()
                     ),
-                    &prompter,
+                    prompter,
+                    sink,
                 )?;
             }
             _ => unreachable!(),

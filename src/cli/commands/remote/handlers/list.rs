@@ -1,29 +1,19 @@
-use crate::cli::context::CommandContext;
-use console::Style;
+use crate::cli::{context::CommandContext, output::OutputSink};
 
-pub fn remote_list(context: CommandContext) -> anyhow::Result<()> {
-    let remote_name = Style::new().bold().green();
-    let remote_provider = Style::new().italic();
-    let remote_id = Style::new().underlined();
-
+pub fn remote_list<S: OutputSink>(context: CommandContext, sink: &S) -> anyhow::Result<()> {
     if context.with_registry()?.remotes.is_empty() {
-        println!(
-            "{}",
-            Style::new()
-                .bold()
-                .yellow()
-                .apply_to("[ WARN ] no remotes were found")
-        )
+        sink.warn("no remotes were found");
+        return Ok(());
     }
 
     for (i, remote) in context.with_registry()?.remotes.iter().enumerate() {
-        println!(
+        sink.plain(format!(
             "> {}. {} ({}) [id: {}]",
             i + 1,
-            remote_name.apply_to(&remote.remote_name),
-            remote_provider.apply_to(&remote.provider),
-            remote_id.apply_to(&remote.id)
-        )
+            remote.remote_name,
+            remote.provider,
+            remote.id
+        ));
     }
 
     Ok(())

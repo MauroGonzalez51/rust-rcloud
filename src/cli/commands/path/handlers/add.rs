@@ -2,6 +2,7 @@ use crate::{
     cli::{
         commands::path::utils::{hooks, path, tags},
         context::CommandContext,
+        output::OutputSink,
         prompter::Prompter,
     },
     config::prelude::*,
@@ -26,12 +27,14 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn path_add<P: Prompter>(
+pub fn path_add<P: Prompter, S: OutputSink>(
     context: CommandContext<LocalArgs>,
     prompter: &P,
+    sink: &S,
 ) -> anyhow::Result<()> {
     if context.with_registry()?.remotes.is_empty() {
         log_warn!("there are no remotes configured");
+        sink.warn("there are no remotes configured");
         return Ok(());
     }
 
@@ -91,6 +94,9 @@ pub fn path_add<P: Prompter>(
             .with_registry()?
             .tx(|rgx| rgx.paths.push(path_config))
             .context("failed to execute transaction")?;
+        sink.success("path added successfully");
+    } else {
+        sink.info("path not saved");
     }
 
     Ok(())

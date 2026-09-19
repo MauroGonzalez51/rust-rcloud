@@ -2,6 +2,7 @@ use crate::{
     cli::{
         commands::{path::utils::path, sync::utils},
         context::CommandContext,
+        output::OutputSink,
         prompter::Prompter,
     },
     config::prelude::HookExecType,
@@ -29,9 +30,10 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn sync_single<'a, P: Prompter>(
+pub fn sync_single<'a, P: Prompter, S: OutputSink>(
     context: CommandContext<LocalArgs<'a>>,
     prompter: &P,
+    sink: &S,
 ) -> anyhow::Result<CommandContext<LocalArgs<'a>>> {
     let direction = match context.local.direction {
         Some(value) => *value,
@@ -102,30 +104,42 @@ pub fn sync_single<'a, P: Prompter>(
     };
 
     match direction {
-        HookExecType::Push => utils::push(utils::push::PushOptions {
-            config: &context.config,
-            registry: std::sync::Arc::clone(&context.registry),
-            paths: utils::push::PushOptionsPaths {
-                rclone: &context.global.rclone,
-                remote: &remote_config,
-                path_config: &path_config,
-            },
-            hooks: &hooks.push,
-            force: &force,
-        })?,
+        HookExecType::Push => {
+            utils::push(utils::push::PushOptions {
+                config: &context.config,
+                registry: std::sync::Arc::clone(&context.registry),
+                paths: utils::push::PushOptionsPaths {
+                    rclone: &context.global.rclone,
+                    remote: &remote_config,
+                    path_config: &path_config,
+                },
+                hooks: &hooks.push,
+                force: &force,
+            })?;
+            sink.success(format!(
+                "pushed {} -> {}:{}",
+                path_config.local_path, remote_config.remote_name, path_config.remote_path
+            ));
+        }
 
-        HookExecType::Pull => utils::pull(utils::pull::PullOptions {
-            config: &context.config,
-            registry: std::sync::Arc::clone(&context.registry),
-            paths: utils::pull::PullOptionsPaths {
-                rclone: &context.global.rclone,
-                remote: &remote_config,
-                path_config: &path_config,
-            },
-            hooks: &hooks.pull,
-            clean: &clean,
-            force: &force,
-        })?,
+        HookExecType::Pull => {
+            utils::pull(utils::pull::PullOptions {
+                config: &context.config,
+                registry: std::sync::Arc::clone(&context.registry),
+                paths: utils::pull::PullOptionsPaths {
+                    rclone: &context.global.rclone,
+                    remote: &remote_config,
+                    path_config: &path_config,
+                },
+                hooks: &hooks.pull,
+                clean: &clean,
+                force: &force,
+            })?;
+            sink.success(format!(
+                "pulled {}:{} -> {}",
+                remote_config.remote_name, path_config.remote_path, path_config.local_path
+            ));
+        }
     }
 
     Ok(context)

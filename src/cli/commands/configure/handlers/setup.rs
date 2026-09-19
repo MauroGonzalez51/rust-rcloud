@@ -1,13 +1,14 @@
 use crate::{
-    cli::{context::CommandContext, prompter::Prompter},
+    cli::{context::CommandContext, output::OutputSink, prompter::Prompter},
     config::prelude::Registry,
-    log_info, log_success, log_warn,
+    log_info,
 };
 use anyhow::Context;
 
-pub fn configure_setup<P: Prompter>(
+pub fn configure_setup<P: Prompter, S: OutputSink>(
     context: CommandContext,
     prompter: &P,
+    sink: &S,
 ) -> anyhow::Result<()> {
     log_info!("checking rclone availability...");
     match std::process::Command::new(&context.global.rclone)
@@ -17,15 +18,15 @@ pub fn configure_setup<P: Prompter>(
         Ok(output) if output.status.success() => {
             let version = String::from_utf8_lossy(&output.stdout);
             let first_line = version.lines().next().unwrap_or("unknown");
-            log_success!("rclone found: {}", first_line);
+            sink.success(format!("rclone found: {}", first_line));
         }
         _ => {
-            log_warn!(
+            sink.warn(format!(
                 "rclone not found at '{}'. Make sure it's installed and accessible.",
                 &context.global.rclone
-            );
+            ));
 
-            println!("you can download it from: https://rclone.org/downloads/");
+            sink.plain("you can download it from: https://rclone.org/downloads/");
         }
     }
 
@@ -35,29 +36,29 @@ pub fn configure_setup<P: Prompter>(
         .clone()
         .ok_or_else(|| anyhow::anyhow!("registry file not specified"))?;
 
-    log_info!("registry path: {}", registry_path.display());
+    sink.info(format!("registry path: {}", registry_path.display()));
 
     if registry_path.exists() {
-        log_warn!("registry file already exists. configuration may already be initialized.");
+        sink.warn("registry file already exists. configuration may already be initialized.");
 
         let should_continue = prompter
             .confirm("continue anyway?", false)
             .context("failed to prompt confirmation")?;
 
         if !should_continue {
-            println!("setup canceled");
+            sink.info("setup canceled");
             return Ok(());
         }
     }
 
     let registry = Registry::load(&registry_path).context("failed to load or create registry")?;
 
-    log_success!("registry loaded successfully");
-    log_info!(
+    sink.success("registry loaded successfully");
+    sink.info(format!(
         "remotes: ({}). paths: ({}).",
         registry.remotes.len(),
         registry.paths.len()
-    );
+    ));
 
     Ok(())
 }
