@@ -76,6 +76,7 @@ pub fn path_add(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
         local_path: local_path.clone(),
         remote_path: remote_path.clone(),
         hash: None,
+        remote_filename: None,
         hooks: PathConfigHooks { push, pull },
         tags,
     };

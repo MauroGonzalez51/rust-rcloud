@@ -8,20 +8,43 @@ use crate::{
 use anyhow::Context;
 use std::path::PathBuf;
 
+/// Path-related inputs for a push.
 pub struct PushOptionsPaths<'a> {
+    /// Path to the `rclone` executable.
     pub rclone: &'a str,
+    /// Target remote.
     pub remote: &'a Remote,
+    /// Path configuration being pushed.
     pub path_config: &'a PathConfig,
 }
 
+/// Inputs for [`push`].
 pub struct PushOptions<'a> {
+    /// Application configuration.
     pub config: &'a AppConfig,
+    /// Shared registry (updated with the new hash on success).
     pub registry: std::sync::Arc<std::sync::Mutex<Registry>>,
+    /// Path/remote/rclone inputs.
     pub paths: PushOptionsPaths<'a>,
+    /// Push hooks, applied in order.
     pub hooks: &'a [HookConfig],
+    /// Skip the unchanged-content check when `true`.
     pub force: &'a bool,
 }
 
+/// Pushes a configured path to its remote.
+///
+/// Steps:
+/// 1. Hash the local content and, unless `force`, skip when it matches the
+///    stored hash (nothing changed).
+/// 2. Run the push hooks in order over a [`HookContext`], transforming the
+///    content (compress, encrypt, back up, ...).
+/// 3. Rename the processed output to the hook-adjusted remote filename
+///    (see [`compute_remote_filename`](super::compute_remote_filename())).
+/// 4. Upload via `rclone` and, on success, persist the new hash in the registry.
+///
+/// # Errors
+/// Returns an error if hashing, a hook, the rename, or the rclone upload fails.
 pub fn push(options: PushOptions) -> anyhow::Result<()> {
     log_info!("running pre-transaction hooks");
 
@@ -143,7 +166,7 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
         format!(
             "{}:{}",
             options.paths.remote.remote_name,
-            parent.join(final_name).to_string_lossy()
+            parent.join(&final_name).to_string_lossy()
         )
     } else {
         format!(
@@ -176,6 +199,7 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
                 .find(|p| p.id == options.paths.path_config.id)
             {
                 path.hash = Some(processed_hash);
+                path.remote_filename = Some(final_name.clone());
             }
         })
         .context("failed to execute transaction")?;

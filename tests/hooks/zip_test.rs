@@ -20,6 +20,7 @@ fn mock_path() -> PathConfig {
         local_path: String::new(),
         remote_path: String::new(),
         hash: None,
+        remote_filename: None,
         tags: vec![],
         hooks: PathConfigHooks {
             push: vec![],

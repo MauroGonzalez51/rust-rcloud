@@ -18,7 +18,7 @@ use crate::{
 /// let context = HookContext::new(some_path);
 /// let hooks = vec![HookConfig::Zip(/* ... */)];
 /// let result = execute_hooks(context, &hooks)?;
-/// ``
+/// ```
 pub fn execute_hooks(
     mut context: HookContext,
     hooks: &[HookConfig],
