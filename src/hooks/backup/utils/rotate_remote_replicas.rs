@@ -1,12 +1,13 @@
 use crate::{
-    config::prelude::Remote, hooks::backup::backup_hook::BackupHookReplica, log_debug, log_warn,
+    config::prelude::Remote,
+    hooks::{backup::backup_hook::BackupHookReplica, prelude::RcloneRunner},
+    log_debug,
 };
-use anyhow::Context;
 
 pub fn rotate_remote_replicas(
     remote_replicas: &mut [BackupHookReplica],
     max_replicas: usize,
-    rclone_path: &str,
+    rclone: &dyn RcloneRunner,
     remote_config: &Remote,
     remote_backup_path: &str,
 ) -> anyhow::Result<()> {
@@ -33,20 +34,7 @@ pub fn rotate_remote_replicas(
 
             log_debug!("removing old replica: {}", remote_path);
 
-            let output = std::process::Command::new(rclone_path)
-                .args(["purge", &remote_path])
-                .env("RCLONE_DRIVE_USE_TRASH", "false")
-                .output()
-                .with_context(|| format!("failed to purge remote file/dir: {}", remote_path,))?;
-
-            if !output.status.success() {
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                log_warn!(
-                    "failed to purge remote file/dir: {} ({})",
-                    remote_path,
-                    stderr
-                )
-            }
+            rclone.purge(&remote_path)?;
         }
     }
 

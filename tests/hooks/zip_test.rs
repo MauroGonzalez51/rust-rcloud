@@ -47,7 +47,12 @@ fn test_zip_single_file() -> anyhow::Result<()> {
     };
 
     let hook = ZipHook::from(config);
-    let ctx = HookContext::new(test_file, "", &mock_remote(), &mock_path());
+    let ctx = HookContext::new(
+        test_file,
+        crate::support::default_test_dependencies(),
+        &mock_remote(),
+        &mock_path(),
+    );
     let result = hook
         .process(ctx, &mock_app_config())
         .context("failed to process file")?;
@@ -84,7 +89,7 @@ fn test_zip_directory() -> anyhow::Result<()> {
     let hook = ZipHook::from(config);
     let ctx = HookContext::new(
         temp_dir.path().to_path_buf(),
-        "",
+        crate::support::default_test_dependencies(),
         &mock_remote(),
         &mock_path(),
     );
@@ -115,7 +120,7 @@ fn test_zip_with_exclusions() -> anyhow::Result<()> {
     let hook = ZipHook::from(config);
     let ctx = HookContext::new(
         temp_dir.path().to_path_buf(),
-        "",
+        crate::support::default_test_dependencies(),
         &mock_remote(),
         &mock_path(),
     );

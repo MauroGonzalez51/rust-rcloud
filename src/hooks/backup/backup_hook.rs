@@ -39,13 +39,13 @@ impl BackupHook {
             .context("remote path must be declared in order to perform a remote backup")?;
 
         let mut replicas =
-            utils::get_remote_replicas(remote_path, &ctx.rclone_path, &ctx.remote_config)
+            utils::get_remote_replicas(remote_path, ctx.dependencies.rclone.as_ref(), &ctx.remote_config)
                 .context("failed to get remote replicas")?;
 
         utils::rotate_remote_replicas(
             &mut replicas,
             self.replicas as usize,
-            &ctx.rclone_path,
+            ctx.dependencies.rclone.as_ref(),
             &ctx.remote_config,
             remote_path,
         )

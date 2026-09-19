@@ -50,7 +50,11 @@ impl HookBuilderSharedConfigTrait for EncryptionHookConfig {
 }
 
 impl EncryptionHookConfig {
-    fn derive_hash(password: &str) -> anyhow::Result<String> {
+    /// Derives a storable Argon2 hash string from `password`.
+    ///
+    /// Used by the interactive builder and available to tests that need to
+    /// construct an encryption hook with a valid stored hash.
+    pub fn derive_hash(password: &str) -> anyhow::Result<String> {
         let salt_bytes: [u8; 16] = rand::random();
         let salt = argon2::password_hash::SaltString::encode_b64(&salt_bytes)
             .map_err(|e| anyhow::anyhow!("failed to create salt: {}", e))?;

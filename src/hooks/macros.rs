@@ -56,17 +56,27 @@ macro_rules! register_hooks {
             )*
         }
 
-        impl From<HookConfig> for Box<dyn Hook> {
-            fn from(val: HookConfig) -> Self {
-                match val {
+        impl HookConfig {
+            /// Runs this hook over `ctx`, dispatching to the concrete hook kind.
+            ///
+            /// Replaces the old `Box<dyn Hook>` path: because `Hook` carries an
+            /// associated `Acquired` type it is not object-safe, so the pipeline
+            /// matches on the config enum and calls each concrete hook's
+            /// monomorphized `process` (acquire + transform).
+            pub fn process(
+                &self,
+                ctx: $crate::hooks::prelude::HookContext,
+                cfg: &AppConfig,
+            ) -> anyhow::Result<$crate::hooks::prelude::HookContext> {
+                match self {
                     $(
-                        HookConfig::$variant(cfg) => Box::new(<$hook_ty>::from(cfg)),
+                        HookConfig::$variant(cfg_inner) => {
+                            <$hook_ty>::from(cfg_inner.clone()).process(ctx, cfg)
+                        }
                     )*
                 }
             }
-        }
 
-        impl HookConfig {
             pub fn modifies_filename(&self) -> bool {
                 match self {
                     $(

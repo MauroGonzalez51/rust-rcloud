@@ -12,14 +12,30 @@ define_hook!(EncryptionHook { hash: String });
 /// The password is prompted and verified against the stored Argon2 hash, then
 /// a per-file key is derived from a random salt stored in each file's header.
 impl Hook for EncryptionHook {
-    fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext> {
+    /// The validated password, obtained (and verified) before transforming.
+    type Acquired = String;
+
+    /// Impure: prompts for the password (via the injected provider) and
+    /// verifies it against the stored Argon2 hash.
+    fn acquire(&self, ctx: &HookContext) -> anyhow::Result<String> {
+        let password = ctx.dependencies.password.get()?;
+        self.verify(&password)?;
+        Ok(password)
+    }
+
+    /// Pure (given `password`): encrypts or decrypts the context path. Does no
+    /// prompting; the password arrives as data.
+    fn transform(
+        &self,
+        ctx: HookContext,
+        cfg: &AppConfig,
+        password: String,
+    ) -> anyhow::Result<HookContext> {
         anyhow::ensure!(
             ctx.file_exists(),
             "source file does not exists: {:?}",
             ctx.path
         );
-
-        let password = self.verify_password()?;
 
         let path = self
             .process_path(&ctx, cfg, &password)

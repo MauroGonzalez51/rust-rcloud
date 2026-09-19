@@ -1,11 +1,18 @@
 use crate::cli::{commands::path::utils::path, context::CommandContext};
+use crate::hooks::prelude::{ProcessRcloneRunner, RcloneRunner};
 use anyhow::Context;
 
-fn execute_rclone(rclone_path: &str, path: &str) -> anyhow::Result<std::process::ExitStatus> {
-    std::process::Command::new(rclone_path)
-        .args(["lsf", path])
-        .status()
-        .with_context(|| format!("failed to execute rclone ls {}", path))
+fn list_and_print(rclone_path: &str, path: &str) -> anyhow::Result<()> {
+    let runner = ProcessRcloneRunner::new(rclone_path);
+    let entries = runner
+        .list(path)
+        .with_context(|| format!("failed to execute rclone ls {}", path))?;
+
+    for entry in entries {
+        println!("{}", entry);
+    }
+
+    Ok(())
 }
 
 #[derive(Clone)]
@@ -25,12 +32,7 @@ impl<'a> Default for LocalArgs<'a> {
 
 pub fn remote_ls(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     if let Some(path) = context.local.path {
-        let status = execute_rclone(&context.global.rclone, path)?;
-
-        if !status.success() {
-            anyhow::bail!("rclone remote ls failed");
-        }
-
+        list_and_print(&context.global.rclone, path)?;
         return Ok(());
     }
 
@@ -56,14 +58,10 @@ pub fn remote_ls(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
         .find(|r| r.id == *path_config.remote_id)
         .ok_or_else(|| anyhow::anyhow!("remote does not exists"))?;
 
-    let status = execute_rclone(
+    list_and_print(
         &context.global.rclone,
         &format!("{}:{}", remote_config.remote_name, path_config.remote_path),
     )?;
-
-    if !status.success() {
-        anyhow::bail!("rclone remote ls failed");
-    }
 
     Ok(())
 }

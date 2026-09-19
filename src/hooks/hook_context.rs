@@ -1,4 +1,5 @@
 use crate::config::prelude::{PathConfig, Remote};
+use crate::hooks::dependencies::HookDependencies;
 use std::path::PathBuf;
 
 /// Keys for values passed between hooks (and between a hook and the sync
@@ -33,8 +34,8 @@ pub enum HookContextMetadata {
 pub struct HookContext {
     /// Current working path. Rewritten by each transforming hook.
     pub path: PathBuf,
-    /// Path to the `rclone` executable (needed by hooks that call rclone).
-    pub rclone_path: String,
+    /// Injectable side-effect capabilities (rclone runner, password provider).
+    pub dependencies: HookDependencies,
     /// Remote this sync targets.
     pub remote_config: Remote,
     /// Path configuration driving this sync.
@@ -47,14 +48,14 @@ impl HookContext {
     /// Creates a context rooted at `path` for the given remote/path config.
     pub fn new(
         path: PathBuf,
-        rclone_path: &str,
+        dependencies: HookDependencies,
         remote_config: &Remote,
         path_config: &PathConfig,
     ) -> Self {
         Self {
             path,
             metadata: std::collections::HashMap::new(),
-            rclone_path: rclone_path.to_string(),
+            dependencies,
             remote_config: remote_config.clone(),
             path_config: path_config.clone(),
         }
@@ -72,7 +73,7 @@ impl HookContext {
         Self {
             path: path.into(),
             metadata: self.metadata.clone(),
-            rclone_path: self.rclone_path.clone(),
+            dependencies: self.dependencies.clone(),
             remote_config: self.remote_config.clone(),
             path_config: self.path_config.clone(),
         }

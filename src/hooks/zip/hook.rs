@@ -15,7 +15,19 @@ define_hook!(ZipHook {
 /// [`ZipChecksum`](crate::hooks::prelude::HookContextMetadata::ZipChecksum) is
 /// recorded; on pull the archive is unpacked into a temp directory.
 impl Hook for ZipHook {
-    fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext> {
+    /// Zip needs nothing from the outside world.
+    type Acquired = ();
+
+    fn acquire(&self, _ctx: &HookContext) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    fn transform(
+        &self,
+        ctx: HookContext,
+        cfg: &AppConfig,
+        _acquired: (),
+    ) -> anyhow::Result<HookContext> {
         anyhow::ensure!(
             ctx.file_exists(),
             "source file does not exists: {:?}",

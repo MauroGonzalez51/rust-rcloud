@@ -73,10 +73,13 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
 
     utils::check_hooks(options.hooks, &HookExecType::Push);
 
+    let dependencies =
+        crate::hooks::prelude::HookDependencies::production(options.paths.rclone);
+
     let context = utils::execute_hooks(
         HookContext::new(
             PathBuf::from(&options.paths.path_config.local_path),
-            options.paths.rclone,
+            dependencies.clone(),
             options.paths.remote,
             options.paths.path_config,
         )
@@ -175,13 +178,11 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
         )
     };
 
-    let status = utils::execute_rclone(
-        options.paths.rclone,
+    let status = dependencies.rclone.transfer(
         final_path
             .to_str()
             .context("failed to convert final_path to str")?,
         &remote_dest,
-        None,
     )?;
 
     if !status.success() {

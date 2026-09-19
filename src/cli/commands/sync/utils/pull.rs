@@ -81,14 +81,15 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
 
     log_debug!("remote_path: {:?}", remote_path);
 
-    let status = utils::execute_rclone(
-        options.paths.rclone,
+    let dependencies =
+        crate::hooks::prelude::HookDependencies::production(options.paths.rclone);
+
+    let status = dependencies.rclone.transfer(
         &remote_path,
         temp_dir
             .path()
             .to_str()
             .context("failed to convert tempdir path to str")?,
-        None,
     )?;
 
     if !status.success() {
@@ -139,7 +140,7 @@ pub fn pull(options: PullOptions) -> anyhow::Result<()> {
     let context = utils::execute_hooks(
         HookContext::new(
             downloaded_file,
-            options.paths.rclone,
+            dependencies.clone(),
             options.paths.remote,
             options.paths.path_config,
         )

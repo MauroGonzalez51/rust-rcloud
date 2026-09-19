@@ -1,5 +1,4 @@
 use crate::{hooks::prelude::HookContext, log_debug};
-use anyhow::Context;
 
 pub fn create_remote_backup(
     ctx: &HookContext,
@@ -10,26 +9,17 @@ pub fn create_remote_backup(
 
     log_debug!("creating remote backup");
 
-    let output = std::process::Command::new(&ctx.rclone_path)
-        .args([
-            "copyto",
-            &format!(
-                "{}:{}",
-                ctx.remote_config.remote_name, ctx.path_config.remote_path
-            ),
-            &format!(
-                "{}:{}/{}",
-                ctx.remote_config.remote_name,
-                remote_path,
-                &format!("{}.{}", timestamp, replica_number)
-            ),
-        ])
-        .output()
-        .context("failed to execute backup in remote")?;
+    let src = format!(
+        "{}:{}",
+        ctx.remote_config.remote_name, ctx.path_config.remote_path
+    );
+    let dst = format!(
+        "{}:{}/{}.{}",
+        ctx.remote_config.remote_name, remote_path, timestamp, replica_number
+    );
 
-    if !output.status.success() {
+    if !ctx.dependencies.rclone.copy_to(&src, &dst)? {
         log_debug!("remote source not found, skipping remote backup");
-        return Ok(());
     }
 
     Ok(())

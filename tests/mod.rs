@@ -11,5 +11,6 @@
 pub mod config;
 pub mod hooks;
 pub mod scenarios;
+pub mod support;
 pub mod sync;
 pub mod utils;

@@ -6,7 +6,6 @@ use crate::{
 use aes_gcm::{KeyInit, aead::Aead};
 use anyhow::Context;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use inquire::Password;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -18,27 +17,23 @@ const VALIDATION_MARKER: &[u8] = b"RCLOUD_ENCRYPTED";
 const ENCRYPTION_PREFIX: &str = "rcloud-encrypted-";
 
 impl EncryptionHook {
-    /// Prompts for the encryption password and verifies it against the stored
-    /// Argon2 hash. Returns the validated password so per-file keys can be
-    /// derived from it.
+    /// Verifies `password` against the stored Argon2 hash.
+    ///
+    /// Pure: does no I/O and no prompting. Acquiring the password is the
+    /// [`PasswordProvider`](crate::hooks::prelude::PasswordProvider)'s job; this
+    /// only validates it.
     ///
     /// # Errors
     /// Fails if the stored hash is malformed or the password does not match.
-    pub fn verify_password(&self) -> anyhow::Result<String> {
-        let password_input = Password::new("Enter encryption password:")
-            .without_confirmation()
-            .with_display_mode(inquire::PasswordDisplayMode::Masked)
-            .prompt()
-            .context("failed to read password input")?;
-
+    pub fn verify(&self, password: &str) -> anyhow::Result<()> {
         let parsed_hash = PasswordHash::new(&self.hash)
             .map_err(|e| anyhow::anyhow!("invalid argon2 hash format in `hash`: {}", e))?;
 
         Argon2::default()
-            .verify_password(password_input.as_bytes(), &parsed_hash)
+            .verify_password(password.as_bytes(), &parsed_hash)
             .map_err(|_| anyhow::anyhow!("invalid password provided"))?;
 
-        Ok(password_input)
+        Ok(())
     }
 
     /// Derives a 32-byte AES-256 key from `password` and a per-file `salt`
@@ -287,12 +282,39 @@ mod tests {
     use crate::config::prelude::HookExecType;
 
     fn hook() -> EncryptionHook {
-        // `hash` is only consulted by `verify_password`; encrypt/decrypt derive
-        // per-file keys straight from the password, so a placeholder is fine.
+        // `hash` is only consulted by `verify`; encrypt/decrypt derive per-file
+        // keys straight from the password, so a placeholder is fine.
         EncryptionHook {
             exec: HookExecType::Push,
             hash: String::new(),
         }
+    }
+
+    /// Builds a hook carrying a real Argon2 hash derived from `password`, so
+    /// `verify` can be exercised.
+    fn hook_with_password(password: &str) -> EncryptionHook {
+        let hash = crate::hooks::prelude::EncryptionHookConfig::derive_hash(password).unwrap();
+        EncryptionHook {
+            exec: HookExecType::Push,
+            hash,
+        }
+    }
+
+    #[test]
+    fn verify_accepts_correct_password() -> anyhow::Result<()> {
+        hook_with_password("s3cret").verify("s3cret")?;
+        Ok(())
+    }
+
+    #[test]
+    fn verify_rejects_wrong_password() {
+        assert!(hook_with_password("s3cret").verify("nope").is_err());
+    }
+
+    #[test]
+    fn verify_rejects_empty_hash() {
+        // Strict: an unset/empty stored hash is malformed, never a pass.
+        assert!(hook().verify("anything").is_err());
     }
 
     #[test]

@@ -38,7 +38,27 @@ define_hook!(BackupHook {
 /// current content into timestamped replicas and prunes old ones down to the
 /// configured `replicas` count. Runs on both push and pull.
 impl Hook for BackupHook {
-    fn process(&self, ctx: HookContext, _cfg: &AppConfig) -> anyhow::Result<HookContext> {
+    /// Backup acquires nothing up front.
+    ///
+    /// Note: unlike Encryption, backup's impurity is *not* a prefix that can be
+    /// acquired ahead of time — its rclone calls (`list` -> `purge` ->
+    /// `copy_to`) are interleaved with the work and depend on intermediate
+    /// results. So `transform` here is impure by design, driving the injected
+    /// [`RcloneRunner`](crate::hooks::prelude::RcloneRunner) from
+    /// `ctx.dependencies`. It stays testable via a mock runner rather than by
+    /// being pure.
+    type Acquired = ();
+
+    fn acquire(&self, _ctx: &HookContext) -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    fn transform(
+        &self,
+        ctx: HookContext,
+        _cfg: &AppConfig,
+        _acquired: (),
+    ) -> anyhow::Result<HookContext> {
         anyhow::ensure!(
             ctx.file_exists(),
             "source file does not exist: {:?}",

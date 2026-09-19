@@ -18,17 +18,64 @@ use serde::{Deserialize, Serialize};
 /// transforms the referenced path (compress, encrypt, back up, ...), and
 /// returns an updated context whose `path` points at the transformed output.
 ///
+/// The work is split into two phases so the pure core can be tested without
+/// mocks:
+/// - [`acquire`](Hook::acquire): the **impure** phase — obtains from the outside
+///   world whatever the transform needs as data (a password prompt, credential
+///   validation, ...). Returns [`Acquired`](Hook::Acquired).
+/// - [`transform`](Hook::transform): the **pure** phase — rewrites the context
+///   using the already-acquired value. It must not prompt or shell out; every
+///   external input arrives through `acquired`.
+///
+/// Hooks that need no external input use `Acquired = ()` and an empty
+/// `acquire`. The [`process`](Hook::process) default composes the two phases and
+/// is not normally overridden.
+///
+/// Because [`Acquired`](Hook::Acquired) is an associated type, `Hook` is **not**
+/// object-safe: the pipeline dispatches through
+/// [`HookConfig::process`](crate::config::hook_config::HookConfig) (a match over
+/// the concrete hook kinds) instead of `Box<dyn Hook>`.
+///
 /// Implementors must be `Send + Sync` because a context may be shared across
 /// threads, and `Debug` so pipelines can be logged.
 ///
 /// # Errors
-/// Returns an error if the transformation fails (missing source, I/O error,
-/// invalid configuration, ...). A failing hook aborts the whole sync.
+/// Returns an error if acquisition or transformation fails (prompt cancelled,
+/// missing source, I/O error, invalid configuration, ...). A failing hook
+/// aborts the whole sync.
 pub trait Hook: std::fmt::Debug + Send + Sync {
-    /// Transforms `ctx` and returns the resulting context.
+    /// Data the hook obtains from the outside world before transforming.
+    ///
+    /// `()` for pure hooks (Zip, Backup); the validated password (`String`) for
+    /// Encryption.
+    type Acquired;
+
+    /// Impure phase: obtains [`Acquired`](Hook::Acquired) from the outside world.
+    ///
+    /// This is where prompts, credential reads, and validation against external
+    /// state belong. Hooks needing nothing return `Ok(())`.
+    fn acquire(&self, ctx: &HookContext) -> anyhow::Result<Self::Acquired>;
+
+    /// Pure phase: transforms `ctx` using the already-obtained `acquired`.
+    ///
+    /// Must not touch the outside world (no prompts, no process spawning that
+    /// isn't already an injected dependency): every external input arrives via
+    /// `acquired`. This is the part exercised directly in tests.
     ///
     /// `cfg` provides application-wide settings such as the temp directory.
-    fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext>;
+    fn transform(
+        &self,
+        ctx: HookContext,
+        cfg: &AppConfig,
+        acquired: Self::Acquired,
+    ) -> anyhow::Result<HookContext>;
+
+    /// Composes [`acquire`](Hook::acquire) then [`transform`](Hook::transform).
+    /// Not normally overridden.
+    fn process(&self, ctx: HookContext, cfg: &AppConfig) -> anyhow::Result<HookContext> {
+        let acquired = self.acquire(&ctx)?;
+        self.transform(ctx, cfg, acquired)
+    }
 }
 
 /// The set of hook kinds known to the application.

@@ -1,4 +1,5 @@
 pub mod backup;
+pub mod dependencies;
 pub mod encryption;
 pub mod hook_builder;
 pub mod hook_context;
