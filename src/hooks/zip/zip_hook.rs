@@ -205,3 +205,83 @@ impl ZipHook {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::prelude::HookExecType;
+
+    fn hook(level: Option<i64>, exclude: Option<Vec<String>>) -> ZipHook {
+        ZipHook {
+            exec: HookExecType::Push,
+            level,
+            exclude,
+        }
+    }
+
+    #[test]
+    fn exclude_set_none_when_empty_or_unset() {
+        assert!(hook(None, None).build_exclude_set().unwrap().is_none());
+        assert!(
+            hook(None, Some(vec![]))
+                .build_exclude_set()
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn exclude_set_built_for_valid_globs() {
+        let set = hook(None, Some(vec!["*.log".into(), "tmp/**".into()]))
+            .build_exclude_set()
+            .unwrap();
+        let set = set.expect("expected a glob set");
+        assert!(set.is_match("error.log"));
+        assert!(set.is_match("tmp/x/y.txt"));
+        assert!(!set.is_match("keep.txt"));
+    }
+
+    #[test]
+    fn exclude_set_invalid_glob_errors() {
+        // An unclosed character class is an invalid glob.
+        let result = hook(None, Some(vec!["[".into()])).build_exclude_set();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn compress_then_decompress_round_trips_a_file() -> anyhow::Result<()> {
+        let cfg = AppConfig::default();
+        let dir = tempfile::tempdir()?;
+        let src = dir.path().join("data.txt");
+        fs::write(&src, b"zip me up")?;
+
+        let h = hook(Some(6), None);
+        let (archive, checksum) = h.compress(&src, &cfg)?;
+        assert!(archive.exists());
+        assert!(!checksum.is_empty());
+
+        let extracted_dir = h.decompress(&archive, &cfg)?;
+        let extracted = extracted_dir.join("data.txt");
+        assert!(extracted.exists());
+        assert_eq!(fs::read(&extracted)?, b"zip me up");
+        Ok(())
+    }
+
+    #[test]
+    fn compress_respects_exclusions() -> anyhow::Result<()> {
+        let cfg = AppConfig::default();
+        let dir = tempfile::tempdir()?;
+        let src = dir.path().join("payload");
+        fs::create_dir(&src)?;
+        fs::write(src.join("keep.txt"), b"keep")?;
+        fs::write(src.join("drop.log"), b"drop")?;
+
+        let h = hook(Some(6), Some(vec!["*.log".into()]));
+        let (archive, _) = h.compress(&src, &cfg)?;
+
+        let extracted = h.decompress(&archive, &cfg)?;
+        assert!(extracted.join("keep.txt").exists());
+        assert!(!extracted.join("drop.log").exists());
+        Ok(())
+    }
+}
