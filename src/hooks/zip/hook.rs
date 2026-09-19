@@ -14,7 +14,7 @@ impl Hook for ZipHook {
         anyhow::ensure!(
             ctx.file_exists(),
             "source file does not exists: {:?}",
-            &ctx.path
+            ctx.path
         );
 
         self.process_path(&ctx, cfg)

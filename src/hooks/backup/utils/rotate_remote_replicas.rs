@@ -10,7 +10,7 @@ pub fn rotate_remote_replicas(
     remote_config: &Remote,
     remote_backup_path: &str,
 ) -> anyhow::Result<()> {
-    remote_replicas.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    remote_replicas.sort_by_key(|b| std::cmp::Reverse(b.timestamp));
 
     let current_count = remote_replicas.len();
 

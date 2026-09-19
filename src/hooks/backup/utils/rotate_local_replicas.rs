@@ -5,7 +5,7 @@ pub fn rotate_local_replicas(
     local_replicas: &mut [BackupHookReplica],
     max_replicas: usize,
 ) -> anyhow::Result<()> {
-    local_replicas.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    local_replicas.sort_by_key(|b| std::cmp::Reverse(b.timestamp));
 
     let current_count = local_replicas.len();
 

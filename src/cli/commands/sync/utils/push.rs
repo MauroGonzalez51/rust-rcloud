@@ -123,8 +123,8 @@ pub fn push(options: PushOptions) -> anyhow::Result<()> {
                 .with_context(|| {
                     format!(
                         "failed to move directory {} to {}",
-                        &context.path.display(),
-                        &renamed_path.display()
+                        context.path.display(),
+                        renamed_path.display()
                     )
                 })?;
             }

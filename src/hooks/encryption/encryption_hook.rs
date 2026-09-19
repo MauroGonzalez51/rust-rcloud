@@ -196,7 +196,9 @@ impl EncryptionHook {
             Some(directory) => tempfile::Builder::new()
                 .prefix(ENCRYPTION_PREFIX)
                 .tempdir_in(&directory)
-                .with_context(|| format!("failed to create temp directory in {}", &directory.display()))?,
+                .with_context(|| {
+                    format!("failed to create temp directory in {}", directory.display())
+                })?,
             None => tempfile::Builder::new()
                 .prefix(ENCRYPTION_PREFIX)
                 .tempdir()

@@ -34,7 +34,7 @@ impl Hook for BackupHook {
         anyhow::ensure!(
             ctx.file_exists(),
             "source file does not exist: {:?}",
-            &ctx.path
+            ctx.path
         );
 
         for backup_type in &self.types {
