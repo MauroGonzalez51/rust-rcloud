@@ -1,5 +1,5 @@
 use crate::{
-    cli::{commands::remote::utils::remote, context::CommandContext},
+    cli::{commands::remote::utils::remote, context::CommandContext, prompter::Prompter},
     config::prelude::*,
     log_debug, log_success,
 };
@@ -21,24 +21,18 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn remote_add(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+pub fn remote_add<P: Prompter>(
+    context: CommandContext<LocalArgs>,
+    prompter: &P,
+) -> anyhow::Result<()> {
     let remote_name = match context.local.name {
-        Some(value) => value,
-        None => &remote::Prompt::name()
-            .with_help_message(
-                "Must be the same that you inserted when configuring the remote in 'rcloud'",
-            )
-            .prompt()
-            .context("failed to create prompt")?
-            .clone(),
+        Some(value) => value.clone(),
+        None => remote::Prompt::name(prompter).context("failed to create prompt")?,
     };
 
     let provider = match context.local.provider {
-        Some(value) => value,
-        None => &remote::Prompt::provider()
-            .prompt()
-            .context("failed to create prompt")?
-            .clone(),
+        Some(value) => value.clone(),
+        None => remote::Prompt::provider(prompter).context("failed to create prompt")?,
     };
 
     log_debug!("[ INFO ] adding remote '{remote_name}' ({provider}) to registry");

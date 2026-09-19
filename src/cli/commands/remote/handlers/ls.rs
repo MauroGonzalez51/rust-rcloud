@@ -1,4 +1,4 @@
-use crate::cli::{commands::path::utils::path, context::CommandContext};
+use crate::cli::{commands::path::utils::path, context::CommandContext, prompter::Prompter};
 use crate::hooks::prelude::{ProcessRcloneRunner, RcloneRunner};
 use anyhow::Context;
 
@@ -30,18 +30,23 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn remote_ls(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+pub fn remote_ls<P: Prompter>(
+    context: CommandContext<LocalArgs>,
+    prompter: &P,
+) -> anyhow::Result<()> {
     if let Some(path) = context.local.path {
         list_and_print(&context.global.rclone, path)?;
         return Ok(());
     }
 
     let path_id = match context.local.path_config {
-        Some(id) => id,
-        None => {
-            &path::Prompt::path_config("Select the path:", std::sync::Arc::clone(&context.registry))
-                .context("failed to select path")?
-        }
+        Some(id) => id.clone(),
+        None => path::Prompt::path_config(
+            prompter,
+            "Select the path:",
+            std::sync::Arc::clone(&context.registry),
+        )
+        .context("failed to select path")?,
     };
 
     let binding = context.with_registry()?;
@@ -49,7 +54,7 @@ pub fn remote_ls(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     let path_config = binding
         .paths
         .iter()
-        .find(|p| p.id == *path_id)
+        .find(|p| p.id == path_id)
         .ok_or_else(|| anyhow::anyhow!("path does not exists"))?;
 
     let remote_config = binding

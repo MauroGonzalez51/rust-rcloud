@@ -1,5 +1,5 @@
 use crate::{
-    cli::{commands::path::utils::path, context::CommandContext},
+    cli::{commands::path::utils::path, context::CommandContext, prompter::Prompter},
     log_info, log_success, log_warn,
 };
 use anyhow::Context;
@@ -15,25 +15,30 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn path_remove(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+pub fn path_remove<P: Prompter>(
+    context: CommandContext<LocalArgs>,
+    prompter: &P,
+) -> anyhow::Result<()> {
     if context.with_registry()?.paths.is_empty() {
         log_warn!("no paths configured");
         return Ok(());
     }
 
     let path_id = match context.local.path_id {
-        Some(value) => value,
-        None => {
-            &path::Prompt::path_config("Select a record:", std::sync::Arc::clone(&context.registry))
-                .context("failed to select path config")?
-        }
+        Some(value) => value.clone(),
+        None => path::Prompt::path_config(
+            prompter,
+            "Select a record:",
+            std::sync::Arc::clone(&context.registry),
+        )
+        .context("failed to select path config")?,
     };
 
     let path = context
         .with_registry()?
         .paths
         .iter()
-        .find(|p| p.id == *path_id)
+        .find(|p| p.id == path_id)
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("path not found"))?;
 

@@ -1,20 +1,16 @@
 use crate::{
+    cli::prompter::Prompter,
     config::prelude::{HookConfig, HookExecType, Hooks},
     hooks::prelude::{EncryptionHookConfig, HookBuilderSharedConfigTrait, HookBuilderTrait},
     log_info,
 };
-use anyhow::Context;
 use argon2::PasswordHasher;
-use inquire::Password;
 
 impl HookBuilderTrait for EncryptionHookConfig {
-    fn build(exec: HookExecType) -> anyhow::Result<HookConfig> {
+    fn build<P: Prompter>(exec: HookExecType, prompter: &P) -> anyhow::Result<HookConfig> {
         log_info!("configuring {} for {}", Hooks::Encryption, exec);
 
-        let password = Self::password()
-            .prompt()
-            .context("failed to get encryption password")?;
-
+        let password = prompter.password("Enter encryption password:")?;
         let hash = Self::derive_hash(&password)?;
 
         Ok(HookConfig::Encryption(Self { exec, hash }))
@@ -22,7 +18,7 @@ impl HookBuilderTrait for EncryptionHookConfig {
 }
 
 impl HookBuilderSharedConfigTrait for EncryptionHookConfig {
-    fn build_shared() -> anyhow::Result<(HookConfig, HookConfig)> {
+    fn build_shared<P: Prompter>(prompter: &P) -> anyhow::Result<(HookConfig, HookConfig)> {
         log_info!(
             "configuring {} for {}, {}",
             Hooks::Encryption,
@@ -30,10 +26,7 @@ impl HookBuilderSharedConfigTrait for EncryptionHookConfig {
             HookExecType::Pull
         );
 
-        let password = Self::password()
-            .prompt()
-            .context("failed to get encryption password")?;
-
+        let password = prompter.password("Enter encryption password:")?;
         let hash = Self::derive_hash(&password)?;
 
         Ok((
@@ -64,10 +57,5 @@ impl EncryptionHookConfig {
             .map_err(|e| anyhow::anyhow!("failed to hash password: {}", e))?;
 
         Ok(password_hash.to_string())
-    }
-
-    fn password() -> Password<'static> {
-        Password::new("Enter encryption password:")
-            .with_validator(inquire::validator::MinLengthValidator::new(1))
     }
 }

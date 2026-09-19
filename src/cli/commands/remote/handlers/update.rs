@@ -1,5 +1,5 @@
 use crate::{
-    cli::{commands::remote::utils::remote, context::CommandContext},
+    cli::{commands::remote::utils::remote, context::CommandContext, prompter::Prompter},
     log_debug, log_info, log_success, log_warn,
 };
 use anyhow::Context;
@@ -21,7 +21,10 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn remote_update(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+pub fn remote_update<P: Prompter>(
+    context: CommandContext<LocalArgs>,
+    prompter: &P,
+) -> anyhow::Result<()> {
     if context.with_registry()?.remotes.is_empty() {
         log_warn!("no remotes configured");
         return Ok(());
@@ -41,10 +44,10 @@ pub fn remote_update(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
             remote::Utils::remote_by_id(std::sync::Arc::clone(&context.registry), value)
                 .context("remote not found")?
         }
-        None => remote::Prompt::remote::<fn(inquire::Select<String>) -> inquire::Select<String>>(
+        None => remote::Prompt::remote(
+            prompter,
             "Select a remote to update:",
             std::sync::Arc::clone(&context.registry),
-            None,
         )
         .context("failed to execute prompt")?,
     };
@@ -52,21 +55,15 @@ pub fn remote_update(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
     log_debug!("using remote_info: {:?}", remote_info);
 
     let name = match context.local.name {
-        Some(value) => value,
-        None => &remote::Prompt::name()
-            .with_default(&remote_info.remote_name)
-            .prompt()
-            .context("failed to execute prompt")?
-            .clone(),
+        Some(value) => value.clone(),
+        None => remote::Prompt::name_with_default(prompter, &remote_info.remote_name)
+            .context("failed to execute prompt")?,
     };
 
     let provider = match context.local.provider {
-        Some(value) => value,
-        None => &remote::Prompt::provider()
-            .with_default(&remote_info.provider)
-            .prompt()
-            .context("failed to create thext prompt")?
-            .clone(),
+        Some(value) => value.clone(),
+        None => remote::Prompt::provider_with_default(prompter, &remote_info.provider)
+            .context("failed to create text prompt")?,
     };
 
     context

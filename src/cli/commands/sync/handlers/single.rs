@@ -2,6 +2,7 @@ use crate::{
     cli::{
         commands::{path::utils::path, sync::utils},
         context::CommandContext,
+        prompter::Prompter,
     },
     config::prelude::HookExecType,
     log_info, log_warn,
@@ -28,25 +29,28 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn sync_single(
-    context: CommandContext<LocalArgs>,
-) -> anyhow::Result<CommandContext<LocalArgs>> {
+pub fn sync_single<'a, P: Prompter>(
+    context: CommandContext<LocalArgs<'a>>,
+    prompter: &P,
+) -> anyhow::Result<CommandContext<LocalArgs<'a>>> {
     let direction = match context.local.direction {
-        Some(value) => value,
-        None => &HookExecType::select("Select direction:")
-            .with_vim_mode(true)
-            .prompt()
+        Some(value) => *value,
+        None => prompter
+            .select(
+                "Select direction:",
+                vec![HookExecType::Push, HookExecType::Pull],
+            )
             .context("failed to select direction")?,
     };
 
     let path_id = match context.local.path_id {
         Some(value) => value.clone(),
         None => path::Prompt::path_config(
+            prompter,
             "Select the path to sync:",
             std::sync::Arc::clone(&context.registry),
         )
-        .context("failed to select path")?
-        .clone(),
+        .context("failed to select path")?,
     };
 
     let path_config = context
@@ -84,18 +88,16 @@ pub fn sync_single(
     }
 
     let force = match context.local.force {
-        Some(value) => value,
-        None => &inquire::Confirm::new("Should we use force option?")
-            .with_default(false)
-            .prompt()
+        Some(value) => *value,
+        None => prompter
+            .confirm("Should we use force option?", false)
             .context("failed to prompt user")?,
     };
 
     let clean = match context.local.clean {
-        Some(value) => value,
-        None => &inquire::Confirm::new("Should we use clean option?")
-            .with_default(true)
-            .prompt()
+        Some(value) => *value,
+        None => prompter
+            .confirm("Should we use clean option?", true)
             .context("failed to prompt user")?,
     };
 
@@ -109,7 +111,7 @@ pub fn sync_single(
                 path_config: &path_config,
             },
             hooks: &hooks.push,
-            force,
+            force: &force,
         })?,
 
         HookExecType::Pull => utils::pull(utils::pull::PullOptions {
@@ -121,8 +123,8 @@ pub fn sync_single(
                 path_config: &path_config,
             },
             hooks: &hooks.pull,
-            clean,
-            force,
+            clean: &clean,
+            force: &force,
         })?,
     }
 

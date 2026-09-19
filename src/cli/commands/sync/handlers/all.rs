@@ -2,6 +2,7 @@ use crate::{
     cli::{
         commands::{path::utils::tags, sync::handlers::single},
         context::CommandContext,
+        prompter::Prompter,
     },
     log_error, log_info, log_warn,
 };
@@ -12,9 +13,12 @@ pub struct LocalArgs<'a> {
     pub tags: &'a [String],
 }
 
-pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+pub fn sync_all<P: Prompter>(
+    mut context: CommandContext<LocalArgs>,
+    prompter: &P,
+) -> anyhow::Result<()> {
     let tags = match context.local.tags.is_empty() {
-        true => tags::select_tags(std::sync::Arc::clone(&context.registry))?,
+        true => tags::select_tags(prompter, std::sync::Arc::clone(&context.registry))?,
         false => context.local.tags.to_vec(),
     };
 
@@ -56,7 +60,7 @@ pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
 
             let path_context = context.with_args(args);
 
-            match single::sync_single(path_context) {
+            match single::sync_single(path_context, prompter) {
                 Ok(_context) => {
                     context.registry = _context.registry;
                     log_info!("synced {} -> {}", local_path, remote_path);
@@ -69,9 +73,8 @@ pub fn sync_all(mut context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
                         err
                     );
 
-                    let should_continue = inquire::Confirm::new("continue?")
-                        .with_default(true)
-                        .prompt()
+                    let should_continue = prompter
+                        .confirm("continue?", true)
                         .context("failed to get confirmation")?;
 
                     if !should_continue {

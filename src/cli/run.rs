@@ -78,6 +78,7 @@ pub fn run() -> anyhow::Result<(), anyhow::Error> {
     let Cli { global, command } = args;
 
     let context = command_context!(app_config, global, registry);
+    let prompter = crate::cli::prompter::InquirePrompter;
 
     match &command {
         Some(cmd) => match cmd {
@@ -87,19 +88,25 @@ pub fn run() -> anyhow::Result<(), anyhow::Error> {
                 }
 
                 commands::remote::command::RemoteCommand::Add { name, provider } => {
-                    remote_add(context.with_args(RemoteAddArgs { name, provider }))?;
+                    remote_add(context.with_args(RemoteAddArgs { name, provider }), &prompter)?;
                 }
 
                 commands::remote::command::RemoteCommand::Remove { id } => {
-                    remote_remove(context.with_args(RemoteRemoveArgs { id }))?
+                    remote_remove(context.with_args(RemoteRemoveArgs { id }), &prompter)?
                 }
 
                 commands::remote::command::RemoteCommand::Update { id, name, provider } => {
-                    remote_update(context.with_args(RemoteUpdateArgs { id, name, provider }))?;
+                    remote_update(
+                        context.with_args(RemoteUpdateArgs { id, name, provider }),
+                        &prompter,
+                    )?;
                 }
 
                 commands::remote::command::RemoteCommand::Ls { path, path_config } => {
-                    remote_ls(context.with_args(RemoteLsArgs { path, path_config }))?;
+                    remote_ls(
+                        context.with_args(RemoteLsArgs { path, path_config }),
+                        &prompter,
+                    )?;
                 }
             },
 
@@ -113,21 +120,24 @@ pub fn run() -> anyhow::Result<(), anyhow::Error> {
                     local_path,
                     remote_path,
                 } => {
-                    path_add(context.with_args(PathAddArgs {
-                        remote_id,
-                        local_path,
-                        remote_path,
-                    }))?;
+                    path_add(
+                        context.with_args(PathAddArgs {
+                            remote_id,
+                            local_path,
+                            remote_path,
+                        }),
+                        &prompter,
+                    )?;
                 }
 
                 commands::path::command::PathCommand::Remove { id } => {
-                    path_remove(context.with_args(PathRemoveArgs { path_id: id }))?;
+                    path_remove(context.with_args(PathRemoveArgs { path_id: id }), &prompter)?;
                 }
             },
 
             Commands::Sync { action } => match action {
                 commands::sync::command::SyncCommand::All { tags } => {
-                    sync_all(context.with_args(SyncAllArgs { tags }))?;
+                    sync_all(context.with_args(SyncAllArgs { tags }), &prompter)?;
                 }
 
                 commands::sync::command::SyncCommand::Path {
@@ -136,16 +146,19 @@ pub fn run() -> anyhow::Result<(), anyhow::Error> {
                     force,
                     clean,
                 } => {
-                    sync_single(context.with_args(SyncSingleArgs {
-                        direction,
-                        path_id,
-                        force: if *force { &Some(true) } else { &None },
-                        clean: if *clean { &Some(true) } else { &None },
-                    }))?;
+                    sync_single(
+                        context.with_args(SyncSingleArgs {
+                            direction,
+                            path_id,
+                            force: if *force { &Some(true) } else { &None },
+                            clean: if *clean { &Some(true) } else { &None },
+                        }),
+                        &prompter,
+                    )?;
                 }
             },
 
-            Commands::Configure => configure_setup(context)?,
+            Commands::Configure => configure_setup(context, &prompter)?,
 
             Commands::Completion { shell } => {
                 let mut cmd = Cli::command();

@@ -1,5 +1,5 @@
 use crate::{
-    cli::{commands::remote::utils::remote, context::CommandContext},
+    cli::{commands::remote::utils::remote, context::CommandContext, prompter::Prompter},
     log_info, log_success, log_warn,
 };
 use anyhow::Context;
@@ -15,7 +15,10 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn remote_remove(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+pub fn remote_remove<P: Prompter>(
+    context: CommandContext<LocalArgs>,
+    prompter: &P,
+) -> anyhow::Result<()> {
     if context.with_registry()?.remotes.is_empty() {
         log_warn!("no remotes configured");
         return Ok(());
@@ -35,10 +38,10 @@ pub fn remote_remove(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
             remote::Utils::remote_by_id(std::sync::Arc::clone(&context.registry), value)
                 .context("remote not found")?
         }
-        None => remote::Prompt::remote::<fn(inquire::Select<String>) -> inquire::Select<String>>(
+        None => remote::Prompt::remote(
+            prompter,
             "Select a remote to remove:",
             std::sync::Arc::clone(&context.registry),
-            None,
         )
         .context("failed to execute prompt")?,
     };

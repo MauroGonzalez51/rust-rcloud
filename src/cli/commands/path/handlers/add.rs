@@ -2,12 +2,12 @@ use crate::{
     cli::{
         commands::path::utils::{hooks, path, tags},
         context::CommandContext,
+        prompter::Prompter,
     },
     config::prelude::*,
     log_debug, log_warn, utils,
 };
 use anyhow::Context;
-use inquire::Confirm;
 
 #[derive(Clone)]
 pub struct LocalArgs<'a> {
@@ -26,35 +26,34 @@ impl<'a> Default for LocalArgs<'a> {
     }
 }
 
-pub fn path_add(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
+pub fn path_add<P: Prompter>(
+    context: CommandContext<LocalArgs>,
+    prompter: &P,
+) -> anyhow::Result<()> {
     if context.with_registry()?.remotes.is_empty() {
         log_warn!("there are no remotes configured");
         return Ok(());
     }
 
     let remote_id = match context.local.remote_id {
-        Some(value) => value,
-        None => &path::Prompt::remote_id::<
-            fn(inquire::Select<'_, String>) -> inquire::Select<'_, String>,
-        >(std::sync::Arc::clone(&context.registry), None)
-        .context("failed to get remote_id")?,
+        Some(value) => value.clone(),
+        None => path::Prompt::remote_id(prompter, std::sync::Arc::clone(&context.registry))
+            .context("failed to get remote_id")?,
     };
 
     let local_path = match context.local.local_path {
-        Some(value) => value,
-        None => &path::Prompt::path("local path:")
-            .prompt()
+        Some(value) => value.clone(),
+        None => path::Prompt::path(prompter, "local path:")
             .context("failed to get local path")?,
     };
 
-    let local_path = utils::expand_path(local_path)?
+    let local_path = utils::expand_path(&local_path)?
         .to_string_lossy()
         .to_string();
 
     let remote_path = match context.local.remote_path {
-        Some(value) => value,
-        None => &path::Prompt::path("remote path:")
-            .prompt()
+        Some(value) => value.clone(),
+        None => path::Prompt::path(prompter, "remote path:")
             .context("failed to get remote path")?,
     };
 
@@ -65,9 +64,9 @@ pub fn path_add(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
         remote_path
     );
 
-    let (push, pull) = hooks::declare_hooks().context("failed to get hooks")?;
+    let (push, pull) = hooks::declare_hooks(prompter).context("failed to get hooks")?;
 
-    let tags = tags::declare_tags(std::sync::Arc::clone(&context.registry))
+    let tags = tags::declare_tags(prompter, std::sync::Arc::clone(&context.registry))
         .context("failed to get tags")?;
 
     let path_config = PathConfig {
@@ -83,9 +82,8 @@ pub fn path_add(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
 
     log_debug!("using path_config: {:?}", path_config);
 
-    let confirm_save = Confirm::new("Save this configuration?")
-        .with_default(true)
-        .prompt()
+    let confirm_save = prompter
+        .confirm("Save this configuration?", true)
         .context("failed to get confirmation")?;
 
     if confirm_save {

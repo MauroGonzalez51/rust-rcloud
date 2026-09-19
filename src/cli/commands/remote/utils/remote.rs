@@ -1,62 +1,85 @@
+use crate::cli::prompter::{Prompter, TextOptions};
 use crate::config::prelude::*;
 use anyhow::Context;
-use inquire::{Select, Text};
 
 pub struct Prompt;
 pub struct Utils;
 
+/// A remote wrapped for selection: shown as a rich label, selected by value.
+struct RemoteChoice(Remote);
+
+impl std::fmt::Display for RemoteChoice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} ({}) [{}]",
+            self.0.remote_name,
+            self.0.provider,
+            &self.0.id[..8.min(self.0.id.len())]
+        )
+    }
+}
+
 impl Prompt {
-    pub fn name() -> Text<'static, 'static> {
-        Text::new("Provide the remote name:")
-            .with_validator(inquire::validator::MinLengthValidator::new(1))
+    /// Prompts for a remote name.
+    pub fn name<P: Prompter>(prompter: &P) -> anyhow::Result<String> {
+        prompter.text(
+            "Provide the remote name:",
+            TextOptions::new().required().help(
+                "Must be the same that you inserted when configuring the remote in 'rcloud'",
+            ),
+        )
     }
 
-    pub fn provider() -> Text<'static, 'static> {
-        Text::new("Provide the remote provider:")
-            .with_validator(inquire::validator::MinLengthValidator::new(1))
+    /// Prompts for a remote name, prefilled with `default`.
+    pub fn name_with_default<P: Prompter>(prompter: &P, default: &str) -> anyhow::Result<String> {
+        prompter.text(
+            "Provide the remote name:",
+            TextOptions::new().required().default_value(default),
+        )
     }
 
-    pub fn remote<F>(
-        prompt: &str,
+    /// Prompts for a remote provider.
+    pub fn provider<P: Prompter>(prompter: &P) -> anyhow::Result<String> {
+        prompter.text(
+            "Provide the remote provider:",
+            TextOptions::new().required(),
+        )
+    }
+
+    /// Prompts for a remote provider, prefilled with `default`.
+    pub fn provider_with_default<P: Prompter>(
+        prompter: &P,
+        default: &str,
+    ) -> anyhow::Result<String> {
+        prompter.text(
+            "Provide the remote provider:",
+            TextOptions::new().required().default_value(default),
+        )
+    }
+
+    /// Selects a configured remote by presenting a labelled list.
+    pub fn remote<P: Prompter>(
+        prompter: &P,
+        message: &str,
         registry: std::sync::Arc<std::sync::Mutex<Registry>>,
-        f: Option<F>,
-    ) -> anyhow::Result<Remote>
-    where
-        F: FnOnce(Select<'_, String>) -> Select<'_, String>,
-    {
-        let options: Vec<(String, String)> = registry
+    ) -> anyhow::Result<Remote> {
+        let choices: Vec<RemoteChoice> = registry
             .lock()
             .map_err(|e| anyhow::anyhow!("{}", e))?
             .remotes
             .iter()
-            .map(|r| {
-                (
-                    format!("{} ({}) [{}]", r.remote_name, r.provider, &r.id[..8]),
-                    r.id.clone(),
-                )
-            })
+            .cloned()
+            .map(RemoteChoice)
             .collect();
 
-        let display_options = options.iter().map(|(display, _)| display.clone()).collect();
+        anyhow::ensure!(!choices.is_empty(), "no remotes configured");
 
-        let mut select = Select::new(prompt, display_options)
-            .with_vim_mode(true)
-            .with_page_size(10)
-            .with_help_message("<remote_name> (<remote_provider>) [<...remote_id>]");
+        let chosen = prompter
+            .select(message, choices)
+            .context("failed to select remote")?;
 
-        if let Some(modifier) = f {
-            select = modifier(select);
-        }
-
-        let selected = select.prompt().context("failed to create select prompt")?;
-
-        let selected_id = &options
-            .into_iter()
-            .find(|(display, _)| *display == selected)
-            .map(|(_, id)| id)
-            .ok_or_else(|| anyhow::anyhow!("failed to find selected remote"))?;
-
-        Utils::remote_by_id(registry, selected_id)
+        Ok(chosen.0)
     }
 }
 

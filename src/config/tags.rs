@@ -1,6 +1,6 @@
+use crate::cli::prompter::{Prompter, TextOptions};
 use crate::config::prelude::*;
 use anyhow::Context;
-use inquire::{MultiSelect, Text};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TagOption {
@@ -18,7 +18,8 @@ impl std::fmt::Display for TagOption {
 }
 
 impl TagOption {
-    pub fn multiple_select(
+    pub fn multiple_select<P: Prompter>(
+        prompter: &P,
         msg: &str,
         registry: std::sync::Arc<std::sync::Mutex<Registry>>,
         allow_create_new_tags: bool,
@@ -64,10 +65,8 @@ impl TagOption {
                 })
                 .collect();
 
-            let selections = MultiSelect::new(msg, existing_tags.clone())
-                .with_vim_mode(true)
-                .with_default(&default_indices)
-                .prompt()
+            let selections = prompter
+                .multi_select(msg, existing_tags.clone(), &default_indices)
                 .context("failed to select tags")?;
 
             if !allow_empty && selections.is_empty() {
@@ -87,8 +86,8 @@ impl TagOption {
             }
 
             if selections.contains(&TagOption::AddNew) {
-                let new_tag = Text::new("New Tag:")
-                    .prompt()
+                let new_tag = prompter
+                    .text("New Tag:", TextOptions::new())
                     .context("failed to get new tag")?
                     .trim()
                     .to_string();

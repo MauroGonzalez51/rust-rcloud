@@ -8,6 +8,7 @@
 // Tests that need access to private items live inline in `src/` as
 // `#[cfg(test)] mod tests` instead.
 
+pub mod cli;
 pub mod config;
 pub mod hooks;
 pub mod scenarios;

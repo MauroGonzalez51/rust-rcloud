@@ -4,79 +4,74 @@ use crate::{
     tui::{
         commands::{RootMenu, RootMenuVariant},
         execute,
+        prompter::RatatuiPrompter,
         utils::prelude::{TreeNodeGetBy, TreeNodeOperations, TreeNodeRef},
         widgets::tree_menu::TreeMenu,
     },
 };
-use anyhow::Context;
-use crossterm::{event, execute, terminal};
+use crossterm::{event, execute as crossterm_execute, terminal};
 use ratatui::{
     prelude::{Backend, CrosstermBackend, Terminal},
     widgets::StatefulWidget,
 };
+use std::cell::RefCell;
 
-fn execute<B>(
-    terminal: &mut Terminal<B>,
+/// Runs one selected action, staying inside raw mode.
+///
+/// Handlers gather any input they need through the injected
+/// [`RatatuiPrompter`], so there is no longer a disable-raw-mode /
+/// re-enable-raw-mode dance around each action. Returns `false` when the user
+/// chose to exit.
+fn run_action<B>(
+    terminal: &RefCell<Terminal<B>>,
     menu: &mut TreeMenu<RootMenu>,
     context: &CommandContext,
     current: &mut TreeNodeRef<RootMenu>,
     state: &mut RootMenu,
-) -> anyhow::Result<()>
+) -> anyhow::Result<bool>
 where
-    B: Backend + std::io::Write,
+    B: Backend,
 {
-    if let Some(action) = menu.navigate_right(current, state) {
-        log_debug!("execute action: {:?}", action);
+    let Some(action) = menu.navigate_right(current, state) else {
+        return Ok(true);
+    };
 
-        terminal::disable_raw_mode()?;
-        execute!(terminal.backend_mut(), terminal::LeaveAlternateScreen)?;
+    log_debug!("execute action: {:?}", action);
 
-        match execute::execute(context.clone(), &action)? {
-            execute::ExecutePostOperation::None => {
-                let should_continue = inquire::Confirm::new("Go back to TUI?")
-                    .with_default(true)
-                    .prompt()
-                    .context("failed to get confirmation")?;
+    let prompter = RatatuiPrompter::new(terminal);
 
-                if !should_continue {
-                    std::process::exit(0);
-                }
-
-                execute!(
-                    std::io::stdout(),
-                    terminal::Clear(terminal::ClearType::All),
-                )?;
-
-                execute!(terminal.backend_mut(), terminal::EnterAlternateScreen)?;
-                terminal::enable_raw_mode()?;
-            }
-        }
+    match execute::execute(context.clone(), &action, &prompter)? {
+        execute::ExecutePostOperation::Exit => Ok(false),
+        execute::ExecutePostOperation::None => Ok(true),
     }
-
-    Ok(())
 }
 
 pub fn run_tui(context: CommandContext) -> anyhow::Result<()> {
     terminal::enable_raw_mode()?;
 
     let mut stdout = std::io::stdout();
-    execute!(stdout, terminal::EnterAlternateScreen)?;
+    crossterm_execute!(stdout, terminal::EnterAlternateScreen)?;
 
     let backend = CrosstermBackend::new(stdout);
-
-    let mut terminal = Terminal::new(backend)?;
+    let terminal = RefCell::new(Terminal::new(backend)?);
 
     let tree: TreeNodeRef<RootMenu> = RootMenu::Root(RootMenuVariant::Placeholder).into();
     let mut state = tree.borrow().value.clone();
     let mut menu = TreeMenu::new(tree.clone());
 
-    loop {
-        terminal.draw(|frame| {
-            menu.clone()
-                .render(frame.area(), frame.buffer_mut(), &mut state);
-        })?;
+    let keys = &context.config.tui.keys;
 
-        if let event::Event::Key(k) = event::read()? {
+    let run_result = (|| -> anyhow::Result<()> {
+        loop {
+            terminal.borrow_mut().draw(|frame| {
+                menu.clone()
+                    .render(frame.area(), frame.buffer_mut(), &mut state);
+            })?;
+
+            let event::Event::Key(k) = event::read()? else {
+                continue;
+            };
+
             if k.kind != event::KeyEventKind::Press {
                 continue;
             }
@@ -89,40 +84,35 @@ pub fn run_tui(context: CommandContext) -> anyhow::Result<()> {
                 }
             };
 
-            match k.code {
-                event::KeyCode::Char(c) if context.config.tui.keys.quit.contains(&c) => break,
+            let is = |set: &[char], code: event::KeyCode| match code {
+                event::KeyCode::Char(c) => set.contains(&c),
+                _ => false,
+            };
 
-                event::KeyCode::Char(c) if context.config.tui.keys.down.contains(&c) => {
-                    menu.navigate_down(&mut current);
-                }
-                event::KeyCode::Down => menu.navigate_down(&mut current),
+            let code = k.code;
+            let is_right = matches!(code, event::KeyCode::Enter | event::KeyCode::Right)
+                || is(&keys.right, code);
 
-                event::KeyCode::Char(c) if context.config.tui.keys.up.contains(&c) => {
-                    menu.navigate_up(&mut current);
-                }
-                event::KeyCode::Up => menu.navigate_up(&mut current),
-
-                event::KeyCode::Char(c) if context.config.tui.keys.right.contains(&c) => {
-                    execute(&mut terminal, &mut menu, &context, &mut current, &mut state)?;
-                }
-                event::KeyCode::Enter | event::KeyCode::Right => {
-                    execute(&mut terminal, &mut menu, &context, &mut current, &mut state)?;
-                }
-
-                event::KeyCode::Char('h') => {
-                    menu.navigate_left(&mut current, &mut state);
-                }
-                event::KeyCode::Left => {
-                    menu.navigate_left(&mut current, &mut state);
-                }
-
-                _ => {}
+            if is(&keys.quit, code) {
+                break;
+            } else if matches!(code, event::KeyCode::Down) || is(&keys.down, code) {
+                menu.navigate_down(&mut current);
+            } else if matches!(code, event::KeyCode::Up) || is(&keys.up, code) {
+                menu.navigate_up(&mut current);
+            } else if matches!(code, event::KeyCode::Left) || is(&keys.left, code) {
+                menu.navigate_left(&mut current, &mut state);
+            } else if is_right
+                && !run_action(&terminal, &mut menu, &context, &mut current, &mut state)?
+            {
+                break;
             }
         }
-    }
+        Ok(())
+    })();
 
+    // Always restore the terminal, even if the loop errored.
     terminal::disable_raw_mode()?;
-    execute!(terminal.backend_mut(), terminal::LeaveAlternateScreen)?;
+    crossterm_execute!(terminal.borrow_mut().backend_mut(), terminal::LeaveAlternateScreen)?;
 
-    Ok(())
+    run_result
 }

@@ -1,4 +1,5 @@
 use crate::{
+    cli::prompter::Prompter,
     config::prelude::{HookConfig, HookExecType, Hooks},
     hooks::{
         backup::hook::BackupHookConfig, encryption::hook::EncryptionHookConfig,
@@ -8,11 +9,12 @@ use crate::{
 
 /// Interactive constructor for a hook's config for a single direction.
 ///
-/// Implemented by each `XHookConfig`. Typically prompts the user (compression
-/// level, password, ...) and returns the corresponding [`HookConfig`].
+/// Implemented by each `XHookConfig`. Prompts the user (compression level,
+/// password, ...) through the injected [`Prompter`] and returns the
+/// corresponding [`HookConfig`].
 pub trait HookBuilderTrait: std::fmt::Debug + Send + Sync {
     /// Builds the config for the given `exec` direction.
-    fn build(exec: HookExecType) -> anyhow::Result<HookConfig>;
+    fn build<P: Prompter>(exec: HookExecType, prompter: &P) -> anyhow::Result<HookConfig>;
 }
 
 /// Interactive constructor that produces both push and pull configs at once.
@@ -22,40 +24,14 @@ pub trait HookBuilderTrait: std::fmt::Debug + Send + Sync {
 /// Gated by [`Hooks::share_config`](crate::config::prelude::Hooks).
 pub trait HookBuilderSharedConfigTrait: std::fmt::Debug + Send + Sync {
     /// Builds the `(push, pull)` config pair from a single prompt session.
-    fn build_shared() -> anyhow::Result<(HookConfig, HookConfig)>;
+    fn build_shared<P: Prompter>(prompter: &P) -> anyhow::Result<(HookConfig, HookConfig)>;
 }
 
 /// Dispatches hook construction to the right `XHookConfig` builder.
-///
-/// Convert into a [`HookConfig`] (single direction) or a
-/// `(HookConfig, HookConfig)` pair (shared config) via `TryFrom`/`TryInto`.
 #[derive(Debug)]
 pub struct HookBuilder {
     hook_type: Hooks,
     hook_exec_type: Option<HookExecType>,
-}
-
-impl TryFrom<HookBuilder> for HookConfig {
-    type Error = anyhow::Error;
-
-    fn try_from(builder: HookBuilder) -> anyhow::Result<Self> {
-        builder.build(
-            builder.hook_type,
-            builder
-                .hook_exec_type
-                .expect("exec_type should be declared"),
-        )
-    }
-}
-
-impl TryFrom<HookBuilder> for (HookConfig, HookConfig) {
-    type Error = anyhow::Error;
-
-    fn try_from(builder: HookBuilder) -> anyhow::Result<Self> {
-        builder
-            .build_shared(builder.hook_type)
-            .ok_or_else(|| anyhow::anyhow!("operation not supported"))?
-    }
 }
 
 impl HookBuilder {
@@ -68,17 +44,27 @@ impl HookBuilder {
         }
     }
 
-    fn build(&self, hook_type: Hooks, exec: HookExecType) -> anyhow::Result<HookConfig> {
-        match hook_type {
-            Hooks::Zip => ZipHookConfig::build(exec),
-            Hooks::Backup => BackupHookConfig::build(exec),
-            Hooks::Encryption => EncryptionHookConfig::build(exec),
+    /// Builds a single-direction config using `prompter`.
+    pub fn build<P: Prompter>(&self, prompter: &P) -> anyhow::Result<HookConfig> {
+        let exec = self
+            .hook_exec_type
+            .expect("exec_type should be declared");
+
+        match self.hook_type {
+            Hooks::Zip => ZipHookConfig::build(exec, prompter),
+            Hooks::Backup => BackupHookConfig::build(exec, prompter),
+            Hooks::Encryption => EncryptionHookConfig::build(exec, prompter),
         }
     }
 
-    fn build_shared(&self, hook_type: Hooks) -> Option<anyhow::Result<(HookConfig, HookConfig)>> {
-        match hook_type {
-            Hooks::Encryption => Some(EncryptionHookConfig::build_shared()),
+    /// Builds a shared `(push, pull)` config pair using `prompter`, if the hook
+    /// supports it.
+    pub fn build_shared<P: Prompter>(
+        &self,
+        prompter: &P,
+    ) -> Option<anyhow::Result<(HookConfig, HookConfig)>> {
+        match self.hook_type {
+            Hooks::Encryption => Some(EncryptionHookConfig::build_shared(prompter)),
             _ => None,
         }
     }

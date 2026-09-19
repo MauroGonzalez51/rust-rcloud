@@ -1,9 +1,14 @@
 use crate::{
-    cli::context::CommandContext, config::prelude::Registry, log_info, log_success, log_warn,
+    cli::{context::CommandContext, prompter::Prompter},
+    config::prelude::Registry,
+    log_info, log_success, log_warn,
 };
 use anyhow::Context;
 
-pub fn configure_setup(context: CommandContext) -> anyhow::Result<()> {
+pub fn configure_setup<P: Prompter>(
+    context: CommandContext,
+    prompter: &P,
+) -> anyhow::Result<()> {
     log_info!("checking rclone availability...");
     match std::process::Command::new(&context.global.rclone)
         .arg("version")
@@ -35,9 +40,8 @@ pub fn configure_setup(context: CommandContext) -> anyhow::Result<()> {
     if registry_path.exists() {
         log_warn!("registry file already exists. configuration may already be initialized.");
 
-        let should_continue = inquire::Confirm::new("continue anyway?")
-            .with_default(false)
-            .prompt()
+        let should_continue = prompter
+            .confirm("continue anyway?", false)
             .context("failed to prompt confirmation")?;
 
         if !should_continue {
