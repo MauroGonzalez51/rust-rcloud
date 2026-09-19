@@ -4,7 +4,6 @@ A powerful CLI wrapper for [rclone](https://rclone.org/) that simplifies cloud s
 
 [![Release](https://img.shields.io/github/v/release/MauroGonzalez51/rust-rcloud)](https://github.com/MauroGonzalez51/rust-rcloud/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![SonarQube](https://github.com/MauroGonzalez51/rust-rcloud/actions/workflows/sonar.yml/badge.svg)](https://github.com/MauroGonzalez51/rust-rcloud/actions/workflows/sonar.yml)
 
 ---
 
