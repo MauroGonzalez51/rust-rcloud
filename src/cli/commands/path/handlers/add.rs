@@ -47,9 +47,33 @@ pub fn path_add(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
             .context("failed to get local path")?,
     };
 
-    let local_path = utils::expand_path(local_path)?
-        .to_string_lossy()
-        .to_string();
+    let local_path = match utils::expand_path(local_path) {
+        Ok(path) => path,
+        Err(_) => {
+            let expanded = shellexpand::tilde(local_path).to_string();
+
+            let create = Confirm::new("The local path does not exist. Create it?")
+                .with_default(true)
+                .prompt()
+                .context("failed to get confirmation")?;
+
+            if !create {
+                return Ok(());
+            }
+
+            std::fs::create_dir_all(&expanded)
+                .with_context(|| format!("failed to create local path: {:?}", expanded))?;
+
+            utils::expand_path(local_path).with_context(|| {
+                format!(
+                    "failed to expand local path after creating it: {:?}",
+                    local_path
+                )
+            })?
+        }
+    };
+
+    let local_path = local_path.to_string_lossy().to_string();
 
     let remote_path = match context.local.remote_path {
         Some(value) => value,
