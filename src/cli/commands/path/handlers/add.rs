@@ -61,8 +61,27 @@ pub fn path_add(context: CommandContext<LocalArgs>) -> anyhow::Result<()> {
                 return Ok(());
             }
 
-            std::fs::create_dir_all(&expanded)
-                .with_context(|| format!("failed to create local path: {:?}", expanded))?;
+            let path = std::path::Path::new(&expanded);
+
+            let is_file =
+                path.extension().is_some() && !expanded.ends_with('/') && !expanded.ends_with('\\');
+
+            if is_file {
+                if let Some(parent) = path.parent() {
+                    std::fs::create_dir_all(parent).with_context(|| {
+                        format!(
+                            "failed to create parent directory for file: {}",
+                            path.display()
+                        )
+                    })?;
+                }
+
+                std::fs::File::create(path)
+                    .with_context(|| format!("failed to create file: {}", path.display()))?;
+            } else {
+                std::fs::create_dir_all(path)
+                    .with_context(|| format!("failed to create directory: {}", path.display()))?;
+            }
 
             utils::expand_path(local_path).with_context(|| {
                 format!(
